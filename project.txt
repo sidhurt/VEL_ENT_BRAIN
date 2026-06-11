@@ -1,0 +1,76 @@
+THINKVELOCITY
+Technical Assignment
+Unified Brain (Memory) - Consumer & Enterprise
+How to read this brief. The two parts below are deliberately under-specified. We are testing judgment, not compliance. Where the brief is silent, decide, state your assumption, and move on. Over-asking for clarification or building everything are both negative signals.
+GOAL: In a Nutshell The GOAL is to create a unified company brain where every employee is a node which has individual memories which get updated according to their usage. This needs to be submitted as an endpoint which is used in a prompt enhancement layer based on keyword matching or any other system that you might feel is relevant.
+The executive, admin, or employee adds their context either by usage or by adding policies and other documents. In the backend, the prompt is enhanced with the context which has been provided, and the output is a prompt which is enhanced with context and front-loaded with any other policy or anything else that might be required or mentioned in the input process. What is a unified brain?
+Unified brain is the velocity’s Unified context or memory. Rather than storing isolated memory slots, Unified brain builds a living knowledge graph that connects everything relevant to a good AI interaction: who the user is, their domain and role, how they communicate, the policies that govern their work, and the context of their active projects. At enhance-time, Unified brain traverses this graph, selects the right slice of knowledge, and renders it as a structured prompt template - so every AI interaction is grounded in real context rather than a blank slate.
+Unified brain works at two levels:
+• Personal brain (consumer): A knowledge graph owned and seeded by the individual user. Populated through onboarding forms and enriched over time as the user works.
+• Company brain (enterprise): A shared knowledge graph seeded by an admin through company forms - org overview, active projects, communication guidelines, and policy rules. Every team member's enhance action draws from this shared brain, ensuring company context and policies are present in every prompt.
+The endpoint is always the same: a structured prompt template that carries the right context and ensures every AI interaction reflects who the user is, what their company does, and what rules govern their work.
+Product context (shared by both parts)
+Velocity (ThinkVelocity) is a browser-extension layer that refines a user's prompt before it reaches whichever AI platform they are on (ChatGPT, Claude, Gemini, and 20+ others). It
+injects an Enhance action into the page, then rewrites the prompt using the user's saved context, detected intent, and platform-specific logic. Personalization quality is the product's core differentiator.
+Two surfaces matter for this assignment. The consumer layer enhances individual prompts and stores per-user knowledge. The Enterprise (Team) layer adds an admin who seeds a shared company brain and governs how AI is used across the team. You do not need to read the full feature list to complete this; the relevant facts are restated in each part.
+Part A - Personal Brain (Consumer)
+Background
+Individual users currently have a thin, disconnected set of memory slots. Unified brain replaces this with a personal knowledge graph seeded through structured onboarding forms and enriched over time. Think of it as Obsidian for your professional identity - bidirectionally linked notes connecting your role, domain, active projects, writing preferences, and recurring tasks - except the output is a prompt template rather than a document. The graph is stored using a tool like Neo4j or Graphify, enabling fast, relationship-aware retrieval at enhance-time.
+Your task
+Design the Unified personal brain. Produce a design document a team could build from. At minimum, address the following.
+1. Brain seeding. How do structured forms populate the graph? What fields in an onboarding form map to which graph nodes and edge types? What is seeded explicitly versus inferred from user behaviour over time?
+2. Graph schema. What are the node types (e.g. person, role, project, concept, style, preference)? What edges connect them, and what do edge weights represent? Reference the linking model of tools like Obsidian or the graph query model of Graphify or Neo4j where they inform your design.
+3. Template generation. How does a graph traversal become a prompt template? Describe the shape of the output template and who writes or maintains the template logic.
+4. Retrieval at enhance-time. How do you traverse the graph to select the right context slice for a given prompt within a tight latency budget? State your target added latency and defend it.
+5. Cold start and freshness. How does Unified brain behave for a brand-new user with an empty brain? How does stale knowledge decay or get flagged for the user to review?
+6. Consumer to Enterprise handoff. When a consumer user joins an Enterprise team, how do their personal brain and the company brain interact? What does the user own versus what the organisation owns?
+Hard constraints
+• The brain is seeded through forms and observed behaviour, not by scraping content from third-party AI sites. Treat DOM-read data as untrusted context, not as authoritative fact.
+• Free-tier users have a storage cap. Your design must degrade gracefully at the cap, not silently break.
+• The personal brain is sensitive. State explicitly what is stored server-side versus client-side and why.
+Part B - Company Brain (Enterprise)
+Background
+On the Enterprise plan, Unified brain is shared. An admin seeds the company brain through structured forms: organisation overview, active projects, communication guidelines, approved and prohibited AI use cases, and policy rules. Every employee's enhance action draws from this shared brain. The brain's output is a prompt template that ensures company context is always present and company policies are always reflected - so the AI knows the company, not just the individual.
+This part is intentionally the harder of the two, because the obvious version of it is a liability. A naive implementation that logs everything employees type, or one that exposes individual activity to admins without consent, creates legal exposure and destroys trust in the very tool people must voluntarily keep installed. A design that ignores this is wrong, not merely incomplete.
+Your task
+Design the Unified company brain. At minimum, address the following.
+1. Company brain seeding. What forms does an admin fill to seed the brain? What concept types belong in a company brain (org context, active project, policy rule, communication persona, approved template)? How are form submissions turned into graph nodes?
+2. Policy encoding. How do rules and policies live in the graph? Describe how a policy such as do not share financial projections with external models becomes a graph node (or subgraph) that actively influences prompt templates at enhance-time.
+3. Template enforcement. How does the company brain ensure every enhanced prompt reflects company context and adheres to its policies? Describe the shape of the output template and how policy nodes contribute to it.
+4. Admin governance. Who can edit which parts of the brain? How do changes propagate to all team members? How is brain history tracked so that a rollback is possible?
+5. Personal vs. company knowledge. When an employee's personal context conflicts with company context, which takes precedence and how? What does the employee see of the company brain versus what the admin sees of the employee's personal brain?
+6. Brain freshness and consistency. How does the company brain stay current as projects change and policies evolve? What happens when an outdated policy node is used in a template before it has been updated?
+Hard constraints
+• Employees have privacy rights. State which legal or consent regime shapes your design, and what the admin can and cannot see of individual employees' enhance activity.
+• The company brain must not require storing full prompt content. If your design does, justify it explicitly and price the risk.
+• The company brain must not degrade enhance latency for non-Enterprise users.
+Deliverables
+1. Code in a GitHub repo.
+2. Graph schema and database init script (personal brain and company brain).
+3. README with setup instructions and example API calls.
+4. Short demo video (2-3 min) showing:
+- Form-based brain seeding for both consumer and enterprise
+- A graph visualisation showing linked concepts (Obsidian-style or Graphify-style)
+- A prompt being enhanced using a brain-generated template
+- A policy node from the company brain appearing in the final prompt template
+How we evaluate
+We score judgment over completeness. The weights below are deliberate.
+Criterion
+What we are looking for
+Weight
+Brain architecture
+Graph schema is coherent, nodes and edges are justified, template output is well-defined.
+25%
+Form-to-graph design
+The path from a filled form to a populated graph node is explicit and buildable.
+20%
+Consumer vs. Enterprise split
+Clear separation of personal and company knowledge, with a defended handoff model.
+20%
+Policy enforcement
+How the graph encodes rules that appear in prompt templates - not just stored, but used.
+20%
+Communication
+A reviewer can follow it in one pass. Diagrams where they earn their place. No padding.
+15%
+A note on AI assistance. Use whatever tools you like, including AI. We can tell the difference between a generated feature list and a defended decision, and we are hiring for the second. Put your reasoning in your own words.

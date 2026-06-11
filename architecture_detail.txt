@@ -1,0 +1,49 @@
+THINKVELOCITY UNIFIED BRAIN MVP - ARCHITECTURAL DISSECTION
+
+# 1. PRODUCT VISION & CORE PHILOSOPHY
+The ThinkVelocity Unified Brain is NOT a passive graph database or a simple "memory" store. It is an Active Context Assembly Engine.
+The fundamental insight of this architecture is that "The graph is not the product. The Context Pack is the product." 
+Users interact with Memory Cards (visual representations of graph nodes) and receive Explainability Receipts (proof of which cards were injected into their prompt).
+
+# 2. ARCHITECTURAL COMPONENTS
+The system is built as a monorepo consisting of a Graph Database, a Node.js Backend, and a React Frontend.
+
+## 2.1 Graph Database Layer (Neo4j)
+- **Engine**: Neo4j running via Docker Compose (Port 7687 for Bolt, 7474 for HTTP).
+- **Schema**: A labeled property graph schema.
+  - Nodes: `User`, `Organization`, `Team`, `Project`, `Policy`, `Style`.
+  - Relationships: `[:WORKS_ON {status: 'Active' | 'Archived'}]`, `[:HAS_STYLE]`, `[:MEMBER_OF]`, `[:BELONGS_TO]`, `[:ENFORCES]`.
+- **Key Design Decision**: Not all relationships are treated equally. The engine actively filters context based on edge properties (e.g., ignoring `WORKS_ON` edges where `status` is not 'Active').
+
+## 2.2 Backend API Layer (Node.js / Express / TypeScript)
+- **Role**: Acts as the translation layer between the Graph Database and the Frontend UI.
+- **Key File**: `backend/src/graphService.ts`
+- **Endpoints**:
+  - `GET /api/cards/:userId`: Queries the graph for a specific user and returns mapped arrays of Identity, Project, Style, Team, and Policy cards.
+  - `GET /api/graph/:userId`: Queries the graph to return raw Node and Edge objects formatted specifically for `@xyflow/react` rendering.
+  - `POST /api/forms/...`: Receives user input to dynamically inject new Project, Style, or Policy nodes directly into Neo4j using Cypher `CREATE`/`MERGE` statements.
+  - `POST /api/enhance`: The core engine. It fetches the user's "Active Context Pack", compiles it into a structured LLM prompt (front-loading Identity and Policies), and returns the enhanced prompt along with the Explainability Receipt.
+
+## 2.3 Frontend Application (React / Vite / TypeScript / Tailwind CSS)
+- **Role**: Demonstrates the Enterprise and Consumer flows, rendering the graph visually to build user trust.
+- **Key UI Components**:
+  - **Memory Cards (Left Column)**: Renders `Card` components for each piece of context. Distinguishes personal styles from locked mandatory company policies (e.g., using red color coding for strict policies).
+  - **Graph Architecture (Middle Column)**: Uses `@xyflow/react` to render a live, dynamic map of the user's brain. When a user submits a form, the graph dynamically updates to show the new node and its edge connection.
+  - **Enhancement Console (Right Column)**: An interactive chat-like interface where users type a raw prompt, hit "Enhance", and view the final injected prompt. It explicitly surfaces the "Explainability Receipt" to prove exactly which Context Nodes were utilized.
+
+# 3. CONTEXT LIFECYCLE & POLICY ENFORCEMENT
+- **The Context Pack**: A 5-layer JSON payload constructed just-in-time consisting of Identity, Active Projects, Active Team/Org, Mandatory Policies, and Personal Styles.
+- **Enterprise Policy Inheritance**: By traversing the graph `(User)-[:MEMBER_OF]->(Team)-[:BELONGS_TO]->(Org)`, the backend inherits and strictly enforces policies defined at the Team or Organization level (e.g., "Do not share financial data"), injecting them at the top of the prompt.
+- **Form-to-Graph Seeding**: Real-time context creation. Adding a "New Project" via the UI executes a Cypher query creating a `(:Project)` node and a `[:WORKS_ON {status: 'Active'}]` edge, instantly influencing the LLM output on the next enhancement.
+
+# 4. HOW TO RUN THE SYSTEM
+1. Start Neo4j: `docker compose up -d`
+2. Backend (Port 3000): `npm install`, then `npm run seed` (to initialize constraints and mock data), then `npm run dev`.
+3. Frontend (Port 5173): `npm install --force`, then `npm run dev`.
+
+# 5. MOCK DATA PROFILES
+The seed script creates two primary profiles to demonstrate different use cases:
+- **John Smith (Consumer Mode)**: Freelance Tech Blogger. Shows simple Context assembly (`User -> Personal Projects -> Personal Style`).
+- **Jane Doe (Enterprise Mode)**: Senior Tech Journalist. Shows complex Context inheritance (`User -> Team -> Org -> Mandatory Policies`).
+
+This MVP successfully proves the concept of an Active Context Assembly Engine over a passive memory store, utilizing visual explainability to establish user trust.

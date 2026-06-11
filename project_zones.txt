@@ -1,0 +1,60 @@
+THINKVELOCITY UNIFIED BRAIN - PROJECT ZONES
+
+To systematically build and scale the "Corporate Jarvis" vision without becoming overwhelmed, the project can be divided into distinct, manageable cognitive zones. Each zone represents a core pillar of the architecture that can be developed, tested, and expanded independently.
+
+=== ZONE 1: ORGANIZATIONAL DATA & TOPOLOGY ===
+This zone forms the rigid, structural skeleton of the enterprise.
+- Entities: Organizations, Divisions, Teams, Departments.
+- Focus: Mapping the hierarchy and structural relationships (e.g., "Engineering Team BELONGS_TO R&D Division").
+- Goal: Create a dynamic organizational chart in the graph where structural changes automatically propagate downwards.
+
+=== ZONE 2: IDENTITY & ROLE MANAGEMENT ===
+This zone defines "who" the user is within the structure of Zone 1.
+- Entities: Users, Roles, Titles, Permissions.
+- Focus: Connecting individuals to the organizational skeleton (e.g., "Jane is a MEMBER_OF Engineering Team", "Jane HAS_ROLE Senior Architect").
+- Goal: Establish access controls and baseline contextual baselines based strictly on an employee's title and placement in the company.
+
+=== ZONE 3: INDIVIDUAL MEMORY CONTEXT (THE PERSONAL GRAPH) ===
+This zone manages the fluid, day-to-day reality of the individual employee.
+- Entities: Projects, Tasks, Personal Styles, Drafts, Recent Interactions.
+- Focus: Tracking what the user is actively doing and how they prefer to work (e.g., "Jane WORKS_ON Project X (Active)", "Jane HAS_STYLE Bullet Points").
+- Goal: Ensure the AI knows what the user cares about *right now* to make responses hyper-relevant without the user needing to explain their current state.
+
+=== ZONE 4: POLICY & ALIGNMENT ENGINE ===
+This zone acts as the invisible governance layer.
+- Entities: Mandatory Policies, Guidelines, Brand Voice, Compliance Rules, Security Restrictions.
+- Focus: Attaching rules to the nodes in Zone 1 (e.g., "R&D Division ENFORCES Secret Data Policy").
+- Goal: Ensure that when a Context Pack is assembled, the AI strictly adheres to the inherited rules of the corporation, team, and role.
+
+=== ZONE 5: CONTEXT ASSEMBLY & TRAVERSAL ===
+This zone is the "Brain" or the engine room that bridges the graph and the AI.
+- Mechanism: The query algorithms that traverse Zones 1-4.
+- Focus: Speed, filtering, and relevance. Pulling the "Active Context Pack" in milliseconds by walking the graph from the User node outwards.
+- Goal: Instantly gather the 5-layer context (Identity, Active Projects, Active Teams, Policies, Styles) without pulling in stale or archived data.
+
+=== ZONE 6: PROMPT UNDERSTANDING & AI ENHANCEMENT ===
+This zone is where the assembled Context Pack meets the Large Language Model.
+- Mechanism: Prompt engineering, prompt injection, and semantic routing.
+- Focus: Taking the user's raw input (e.g., "Write an update") and seamlessly fusing it with the Context Pack.
+- Goal: Produce an output that sounds like it came from an employee who perfectly understands their role, current projects, and company policies.
+
+=== ZONE 7: EXPLAINABILITY & USER EXPERIENCE (UI/UX) ===
+This zone is what the user actually sees and touches.
+- Entities: Memory Cards, Graph Visualizations, Explainability Receipts.
+- Focus: Building trust and providing an intuitive interface.
+- Goal: Ensure the user understands exactly *what* the AI knows (Cards) and *why* it gave a specific answer (Receipts).
+
+=== THE CROSS-CUTTING CONCEPT: LIFECYCLE (TEMPORAL EVOLUTION) ===
+This is not a single zone, but the fourth dimension applied to all 7 zones. An enterprise system is never static. It must manage the evolution of context over time:
+Creation -> Usage -> Change -> Archive -> Restore
+
+- **Organizational Lifecycle (Zone 1)**: Teams merge, split, or rename. Instead of deleting old nodes, how do we version them? How do we handle "legacy context"?
+- **Identity Lifecycle (Zone 2)**: Employees are promoted, switch departments, or leave the company. When Jane moves from Engineering to Product, her context pack must evolve. What happens to her engineered memory? Does it get archived or inherited?
+- **Project Lifecycle (Zone 3)**: Projects move from Active -> Completed -> Archived. We already built a basic edge status filter (`[:WORKS_ON {status: 'Active'}]`), but we need a formal engine to handle pausing, unpausing, or archiving entire context trees.
+- **Policy Lifecycle (Zone 4)**: A compliance rule is updated. Do old prompts get re-evaluated? We need temporal edges (e.g., `[:ENFORCES {valid_from: '2026-01-01', valid_to: '2026-06-01'}]`) so the AI knows which policy was active at a specific moment in time.
+
+The Lifecycle Engine ensures that the Unified Brain never suffers from "context rot." It guarantees the AI distinguishes between what was true yesterday, what is true today, and what should be forgotten.
+
+---
+SUGGESTED NEXT STEPS:
+By isolating these zones (and applying the Lifecycle lens to each), we can tackle them one by one. For example, we can spend an entire sprint just perfecting Zone 3 (Individual Memory Context + its Archival Lifecycle) before worrying about Zone 4 (Policy Engine). Let me know which Zone you would like to dive into first!
