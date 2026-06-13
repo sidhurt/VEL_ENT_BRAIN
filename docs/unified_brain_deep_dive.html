@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThinkVelocity Unified Brain: Architecture Deep Dive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.8); border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-300 min-h-screen relative overflow-x-hidden custom-scrollbar selection:bg-indigo-500/30">
+
+    <!-- Decorative Background Elements -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div class="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-fuchsia-600/10 blur-[120px] rounded-full mix-blend-screen"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-panel px-8 py-5 flex justify-between items-center shadow-lg border-b border-slate-800">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.5)]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent tracking-wide">
+                    ThinkVelocity Unified Brain
+                </h1>
+                <p class="text-xs font-semibold tracking-widest text-slate-400 uppercase mt-1">Architecture & Mechanics Deep Dive</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold uppercase tracking-widest">Confidential</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-4xl mx-auto py-12 px-6 flex flex-col gap-8">
+
+        <!-- Intro -->
+        <div class="glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-fuchsia-500 opacity-70 group-hover:opacity-100 transition-opacity"></div>
+            <p class="text-lg text-slate-300 leading-relaxed font-medium">
+                The Unified Brain is not a static database; it is a <strong class="text-indigo-300">living, dynamic knowledge graph</strong> that intelligently routes context to Language Models just-in-time (JIT). This document explains the ingenious mechanics beneath the surface—from graph topography and enterprise inheritance to the mathematical relevance engine that auto-evolves with user behaviour.
+            </p>
+        </div>
+
+        <!-- Section 1 -->
+        <section class="glass-panel rounded-2xl p-8 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">1</div>
+                <h2 class="text-xl font-bold text-slate-100">The Core Philosophy: Why a Graph Database?</h2>
+            </div>
+            <div class="space-y-4 text-slate-400 leading-relaxed text-sm">
+                <p>Most LLM wrappers dump user preferences into a flat JSON file or a Vector Database (RAG). This fails at scale because <em class="text-slate-300">context is inherently relationship-driven</em>.</p>
+                <p>In the Unified Brain, we use <strong class="text-indigo-400">Neo4j</strong>. Every employee, project, skill, and company rule is a Node. The connections between them are Edges.</p>
+                <div class="p-4 bg-slate-950/80 rounded-xl border border-slate-800 font-mono text-xs text-indigo-300/80 shadow-inner overflow-x-auto">
+                    By structuring data this way, we don't have to write complex SQL joins to figure out which rules apply to which user. We simply traverse the graph:<br><br>
+                    <span class="text-fuchsia-400">[User]</span> -> <span class="text-slate-500">[:MEMBER_OF]</span> -> <span class="text-sky-400">[Team]</span> -> <span class="text-slate-500">[:BELONGS_TO]</span> -> <span class="text-indigo-400">[Organization]</span> -> <span class="text-slate-500">[:ENFORCES]</span> -> <span class="text-rose-400">[Policy]</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="glass-panel rounded-2xl p-8 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">2</div>
+                <h2 class="text-xl font-bold text-slate-100">Graph Seeding & Topography</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal -->
+                <div class="p-5 bg-slate-900/50 rounded-xl border border-slate-800/80">
+                    <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        The Personal Brain
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Owned by the individual user. When an employee fills out their onboarding form, the system generates:</p>
+                    <ul class="space-y-2 text-xs text-slate-300 font-medium">
+                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> A central <code class="bg-slate-800 px-1 rounded text-indigo-300">User</code> node (the anchor).</li>
+                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Role</code> and <code class="bg-slate-800 px-1 rounded text-indigo-300">Domain</code> nodes linked via <code class="text-slate-500">[:HAS_ROLE]</code> and <code class="text-slate-500">[:EXPERT_IN]</code>.</li>
+                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Project</code> and <code class="bg-slate-800 px-1 rounded text-indigo-300">Task</code> nodes linked via <code class="text-slate-500">[:WORKS_ON]</code> and <code class="text-slate-500">[:PERFORMS]</code>.</li>
+                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Style</code> nodes defining tone of voice.</li>
+                    </ul>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="p-5 bg-slate-900/50 rounded-xl border border-slate-800/80">
+                    <h3 class="text-sm font-bold text-fuchsia-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        The Company Brain
+                    </h3>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Owned by the admin. When an enterprise is established:</p>
+                    <ul class="space-y-2 text-xs text-slate-300 font-medium">
+                        <li class="flex gap-2 items-start"><span class="text-fuchsia-500">•</span> <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Organization</code> and <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Team</code> nodes are created.</li>
+                        <li class="flex gap-2 items-start"><span class="text-fuchsia-500">•</span> <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Policy</code> nodes (e.g., "No PII") are attached via <code class="text-slate-500">[:ENFORCES]</code>.</li>
+                        <li class="flex gap-2 items-start bg-slate-800/50 p-2 rounded border border-slate-700/50 mt-2">
+                            <span class="text-fuchsia-400 font-bold">The Magic Link:</span> When a user is added, a <code class="text-slate-500 text-[10px]">[:MEMBER_OF]</code> edge is drawn. Instantly, the user inherits every policy and enterprise project via graph traversal. Zero data duplication occurs.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="glass-panel rounded-2xl p-8 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">3</div>
+                <h2 class="text-xl font-bold text-slate-100">The Memory Relevance Engine</h2>
+            </div>
+            <p class="text-sm text-slate-400 mb-6 leading-relaxed">
+                When the Velocity Browser Extension intercepts a prompt, it makes a silent API call to <code class="bg-slate-800 text-slate-300 px-1 rounded">/api/enhance</code>. The Brain must decide exactly what 15 pieces of context to send back. It does this via a sophisticated scoring algorithm.
+            </p>
+
+            <div class="space-y-4">
+                <!-- Scoring Dimensions -->
+                <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">The 5-Dimensional Scoring Algorithm</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                            <div class="w-12 text-center text-indigo-400 font-bold font-mono">+15x</div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200">Intent Matching (Keywords)</span>
+                                <p class="text-xs text-slate-400 mt-1">Base +20, plus +15 per matched word between prompt and node content.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                            <div class="w-12 text-center text-emerald-400 font-bold font-mono">+50</div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200">State Score (Lifecycle)</span>
+                                <p class="text-xs text-slate-400 mt-1">Active = 50. Recent = 20. Archived = 0.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                            <div class="w-12 text-center text-sky-400 font-bold font-mono">2x</div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200">Frequency Score</span>
+                                <p class="text-xs text-slate-400 mt-1">Usage Count × 2. Rewards heavily traversed paths.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                            <div class="w-12 text-center text-amber-400 font-bold font-mono">+15</div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200">Recency Score</span>
+                                <p class="text-xs text-slate-400 mt-1">Used in last 24h = +15. Used in last 7 days = +5.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+                            <div class="w-12 text-center text-fuchsia-400 font-bold font-mono">+100</div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-200">Identity Anchors</span>
+                                <p class="text-xs text-slate-400 mt-1">Roles & Domains get massive boosts so the LLM always knows who is speaking.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Governance Override -->
+                <div class="p-5 bg-rose-950/20 rounded-xl border border-rose-900/30 flex gap-4 items-start relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-rose-600/10 rounded-full blur-2xl"></div>
+                    <svg class="text-rose-400 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <div>
+                        <h3 class="text-sm font-bold text-rose-400 uppercase tracking-widest mb-1">The Enterprise Governance Override</h3>
+                        <p class="text-xs text-rose-200/70 leading-relaxed">If an admin sets a company rule, it cannot be bypassed. The algorithm automatically assigns any node of type `Policy` a score of <strong class="text-rose-400 text-sm">10,000</strong>. This guarantees that enterprise compliance will win every single context assembly race and be injected into the final prompt.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="glass-panel rounded-2xl p-8 shadow-xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">4</div>
+                <h2 class="text-xl font-bold text-slate-100">Organic Auto-Evolution</h2>
+            </div>
+            <p class="text-sm text-slate-400 mb-6 leading-relaxed">
+                There are no "interact" buttons. The graph learns silently based on the user's API requests.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">Strengthening via Usage</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Every time the engine selects a node, <code class="text-slate-500">updateMemoryStates</code> fires. It increments <code class="text-slate-500">usageCount</code> and updates <code class="text-slate-500">lastUsed</code> to right now.</p>
+                </div>
+                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
+                    <h4 class="text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">Auto-Resurrection</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">If an archived project is specifically mentioned in a prompt (high Intent Score), it is pulled into the payload and instantly upgraded back to <code class="text-slate-500">Active</code>.</p>
+                </div>
+                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
+                    <h4 class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">Organic Decay</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed"><code class="text-slate-500">decayMemories</code> simulates time. Edge traversal drops to <code class="text-slate-500">Recent</code> after 7 days, and <code class="text-slate-500">Archived</code> after 30 days of no use.</p>
+                </div>
+                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
+                    <h4 class="text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">The Archive Penalty</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Archived memories receive a <strong class="text-rose-400">-1000 point penalty</strong>. They are actively hidden to save tokens and reduce LLM hallucinations, unless explicitly invoked.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="glass-panel rounded-2xl p-8 shadow-xl relative overflow-hidden">
+            <div class="absolute right-0 bottom-0 opacity-10">
+                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+            </div>
+            <div class="flex items-center gap-3 mb-6 relative z-10">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">5</div>
+                <h2 class="text-xl font-bold text-slate-100">Velocity Prompt Engine Integration</h2>
+            </div>
+            
+            <p class="text-sm text-slate-400 mb-6 leading-relaxed relative z-10">
+                The Unified Brain operates as a headless, Just-In-Time (JIT) microservice.
+            </p>
+
+            <div class="relative z-10">
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">1</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-200">Intercept</h4>
+                        <p class="text-xs text-slate-400">The user types in ChatGPT. The Velocity extension pauses the request.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">2</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-200">Request</h4>
+                        <p class="text-xs text-slate-400">The extension silently POSTs to the Unified Brain API.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">3</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-200">Assembly</h4>
+                        <p class="text-xs text-slate-400">The Brain runs the Scoring Algorithm, pulling the top 15 nodes + all 10,000-point Policies.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">4</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-200">Delivery</h4>
+                        <p class="text-xs text-slate-400">The Brain returns a structured JSON <code class="text-slate-300">ContextPack</code>.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 mb-4">
+                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">5</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-200">Injection</h4>
+                        <p class="text-xs text-slate-400">The extension formats that JSON into a hidden system prompt.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-bold mt-0.5 shrink-0">6</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-emerald-400">Execution</h4>
+                        <p class="text-xs text-emerald-200/70">The massively enhanced prompt is forwarded to OpenAI. The user experiences zero latency, but receives an LLM response perfectly tailored to their identity, active projects, and legal boundaries.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
