@@ -1,0 +1,82 @@
+ThinkVelocity Unified Brain: Architecture & Mechanics Deep Dive
+
+The Unified Brain is not a static database; it is a living, dynamic knowledge graph that intelligently routes context to Language Models just-in-time (JIT). This document explains the ingenious mechanics beneath the surface—from graph topography and enterprise inheritance to the mathematical relevance engine that auto-evolves with user behaviour.
+
+--------------------------------------------------------------------------------
+
+1. The Core Philosophy: Why a Graph Database?
+
+Most LLM wrappers dump user preferences into a flat JSON file or a Vector Database (RAG). This fails at scale because context is inherently relationship-driven.
+
+In the Unified Brain, we use Neo4j. Every employee, project, skill, and company rule is a Node. The connections between them are Edges. 
+By structuring data this way, we don't have to write complex SQL joins to figure out which rules apply to which user. We simply traverse the graph: 
+[User] -> [:MEMBER_OF] -> [Team] -> [:BELONGS_TO] -> [Organization] -> [:ENFORCES] -> [Policy].
+
+--------------------------------------------------------------------------------
+
+2. Graph Seeding & Topography
+
+The system operates across two interconnected hemispheres:
+
+The Personal Brain (Consumer)
+Owned by the individual user. When an employee fills out their onboarding form, the system generates:
+- A central User node (the anchor).
+- Role and Domain nodes linked via [:HAS_ROLE] and [:EXPERT_IN].
+- Project and Task nodes linked via [:WORKS_ON] and [:PERFORMS].
+- Style nodes defining their tone of voice.
+
+The Company Brain (Enterprise)
+Owned by the organization's admin. When an enterprise is established:
+- Organization and Team nodes are created.
+- Policy nodes (e.g., "Professional Communication Only", "No PII") are attached via [:ENFORCES].
+- The Magic Link: When a user is added to an enterprise, a single [:MEMBER_OF] edge is drawn between the User and the Team. Instantly, the user inherits every policy and enterprise project via graph traversal. Zero data duplication occurs.
+
+--------------------------------------------------------------------------------
+
+3. The Memory Relevance Engine (The "Brain")
+
+When the Velocity Browser Extension intercepts a prompt, it makes a silent API call to /api/enhance with the userId and the raw prompt. The Brain must decide exactly what 15 pieces of context to send back. It does this via a sophisticated scoring algorithm (rankAndSelectContext).
+
+The Scoring Algorithm
+Every connected memory node starts at 0 and is graded on five dimensions:
+
+1. Intent Matching (Keywords): 
+   The engine splits the user's prompt into words. If a word matches the content of a node (e.g., prompt mentions "SAP", and the user has an "SAP" domain node), it receives a +20 base score, plus +15 points for every matched word.
+2. State Score (The Lifecycle): 
+   Active projects get +50 points. Recent projects get +20 points. Archived projects get 0 points.
+3. Frequency Score (Usage History): 
+   The node's usageCount is multiplied by 2. If a user asks about the "Q4 Rebrand" project 50 times, it gains an insurmountable +100 point lead over other projects, naturally surfacing it to the top.
+4. Recency Score (Temporal Relevance): 
+   If a memory was used in the last 24 hours, it gets a +15 point bonus. If used in the last 7 days, it gets +5 points.
+5. Identity Anchors: 
+   Role and Domain nodes automatically receive a massive +100 point boost. The LLM must always know who is speaking.
+
+The Enterprise Governance Override
+If an admin sets a company rule, it cannot be bypassed. The algorithm looks for any node of type Policy and forcefully assigns it a score of 10,000. 
+This guarantees that enterprise compliance will win every single context assembly race and be injected into the final prompt.
+
+--------------------------------------------------------------------------------
+
+4. Organic Auto-Evolution (The Living Brain)
+
+There are no "interact" buttons in the Unified Brain. The graph learns silently based on the user's API requests.
+
+- Strengthening via Usage: Every time the Memory Relevance Engine selects a node and puts it in the ContextPack, the updateMemoryStates function fires. It increments the edge's usageCount and updates the lastUsed timestamp to right now.
+- Auto-Resurrection: If a project was Archived, but the user specifically typed its name in a prompt (triggering a high Intent Score), the engine pulls it into the payload and instantly upgrades its state back to Active.
+- Organic Decay: The decayMemories function simulates time. If an edge isn't traversed for 7 days, it downgrades to Recent. If it isn't traversed for 30 days, it downgrades to Archived. 
+- The Archive Penalty: Archived memories receive a -1000 point penalty. They are actively hidden from the prompt payload to save tokens and reduce LLM hallucinations, unless the user explicitly types the project's name, overriding the penalty via the Intent Score.
+
+--------------------------------------------------------------------------------
+
+5. Velocity Prompt Engine Integration
+
+The Unified Brain operates as a headless, Just-In-Time (JIT) microservice. 
+
+1. Intercept: The user types in ChatGPT. The Velocity extension pauses the request.
+2. Request: The extension silently POSTs to the Unified Brain API.
+3. Assembly: The Brain runs the Scoring Algorithm, pulling the top 15 nodes + all 10,000-point Enterprise Policies.
+4. Delivery: The Brain returns a structured JSON ContextPack.
+5. Injection: The extension formats that JSON into a hidden system prompt (e.g., "SYSTEM: You are Siddharth. Policy: Professional Communication Only. USER PROMPT:...")
+6. Execution: The massively enhanced prompt is forwarded to OpenAI.
+
+The user experiences zero latency, but receives an LLM response perfectly tailored to their identity, their active projects, and their employer's legal boundaries.
