@@ -29,6 +29,9 @@ const getColorForLabel = (label: string) => {
         case 'Policy': return '#ef4444';
         case 'Team': return '#f59e0b';
         case 'Organization': return '#64748b';
+        case 'Role': return '#eab308';
+        case 'Domain': return '#06b6d4';
+        case 'Task': return '#ec4899';
         default: return '#ccc';
     }
 }

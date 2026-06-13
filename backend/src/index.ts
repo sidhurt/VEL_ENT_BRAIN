@@ -36,54 +36,125 @@ app.get('/api/graph/:userId', async (req, res) => {
     }
 });
 
-// Form Seeding Endpoints
-import { v4 as uuidv4 } from 'uuid';
 import { getSession } from './db';
 
-app.post('/api/forms/consumer/project', async (req, res) => {
+app.post('/api/onboard/personal', async (req, res) => {
     const session = getSession();
     try {
-        const { userId, name } = req.body;
-        const id = 'proj-' + uuidv4();
-        await session.run(`
-            MATCH (u:User {id: $userId})
-            CREATE (p:Project {id: $id, name: $name, type: 'Personal'})
-            CREATE (u)-[:WORKS_ON {memoryState: 'Active', usageCount: 0, lastUsed: timestamp()}]->(p)
-        `, { userId, id, name });
-        res.json({ success: true, id });
+        const { userId, name, role, domains, projects, tasks, style } = req.body;
+        
+        // 1. Create User
+        await session.run(`MERGE (u:User {id: $userId}) ON CREATE SET u.name = $name`, { userId, name });
+
+        // 2. Role
+        if (role) {
+            const roleId = 'role-' + role.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            await session.run(`
+                MATCH (u:User {id: $userId})
+                MERGE (r:Role {id: $roleId}) ON CREATE SET r.name = $role
+                MERGE (u)-[:HAS_ROLE]->(r)
+            `, { userId, roleId, role });
+        }
+
+        // 3. Domains
+        if (domains && Array.isArray(domains)) {
+            for (const domain of domains) {
+                const domId = 'domain-' + domain.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (d:Domain {id: $domId}) ON CREATE SET d.name = $domain
+                    MERGE (u)-[:EXPERT_IN]->(d)
+                `, { userId, domId, domain });
+            }
+        }
+
+        // 4. Projects
+        if (projects && Array.isArray(projects)) {
+            for (const proj of projects) {
+                const projId = 'proj-' + proj.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (p:Project {id: $projId}) ON CREATE SET p.name = $proj, p.type = 'Personal'
+                    MERGE (u)-[:WORKS_ON {memoryState: 'Active', usageCount: 10, lastUsed: timestamp()}]->(p)
+                `, { userId, projId, proj });
+            }
+        }
+
+        // 5. Tasks
+        if (tasks && Array.isArray(tasks)) {
+            for (const task of tasks) {
+                const taskId = 'task-' + task.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (t:Task {id: $taskId}) ON CREATE SET t.name = $task
+                    MERGE (u)-[:PERFORMS {memoryState: 'Active', usageCount: 5, lastUsed: timestamp()}]->(t)
+                `, { userId, taskId, task });
+            }
+        }
+
+        // 6. Style
+        if (style) {
+            const styleId = 'style-' + userId;
+            await session.run(`
+                MATCH (u:User {id: $userId})
+                MERGE (s:Style {id: $styleId}) ON CREATE SET s.formattingRules = $style
+                MERGE (u)-[:HAS_STYLE {memoryState: 'Active', usageCount: 5, lastUsed: timestamp()}]->(s)
+            `, { userId, styleId, style });
+        }
+
+        res.json({ success: true, message: 'Personal Brain Onboarded' });
+    } catch (err: any) {
+        console.error("Personal Onboard Error:", err);
+        res.status(500).json({ error: err.message });
     } finally {
         await session.close();
     }
 });
 
-app.post('/api/forms/consumer/style', async (req, res) => {
+app.post('/api/onboard/enterprise', async (req, res) => {
     const session = getSession();
     try {
-        const { userId, text } = req.body;
-        const id = 'style-' + uuidv4();
+        const { userId, orgId, orgName, policies, projects } = req.body;
+        
+        // 1. Create Organization and default Team, and link active user
         await session.run(`
+            MERGE (o:Organization {id: $orgId}) ON CREATE SET o.name = $orgName, o.type = 'Enterprise'
+            MERGE (t:Team {id: 'team-default-' + $orgId}) ON CREATE SET t.name = 'Default Team'
+            MERGE (t)-[:BELONGS_TO]->(o)
+            WITH t
             MATCH (u:User {id: $userId})
-            CREATE (s:Style {id: $id, formattingRules: $text})
-            CREATE (u)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0, lastUsed: timestamp()}]->(s)
-        `, { userId, id, text });
-        res.json({ success: true, id });
-    } finally {
-        await session.close();
-    }
-});
+            MERGE (u)-[:MEMBER_OF]->(t)
+        `, { userId, orgId, orgName });
 
-app.post('/api/forms/enterprise/policy', async (req, res) => {
-    const session = getSession();
-    try {
-        const { userId, text } = req.body;
-        // In this MVP, we assume the user is part of a team and the policy is applied to that team
-        const id = 'pol-' + uuidv4();
-        await session.run(`
-            MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t:Team)
-            CREATE (p:Policy {id: $id, ruleText: $text, type: 'Mandatory'})
-            CREATE (t)-[:ENFORCES {memoryState: 'Active', usageCount: 0, lastUsed: timestamp()}]->(p)
-        `, { userId, id, text });
-        res.json({ success: true, id });
+        // 2. Policies
+        if (policies && Array.isArray(policies)) {
+            for (const i in policies) {
+                const pol = policies[i];
+                const polId = 'pol-' + orgId + '-' + i;
+                await session.run(`
+                    MATCH (o:Organization {id: $orgId})
+                    MERGE (p:Policy {id: $polId}) ON CREATE SET p.ruleText = $pol, p.classification = 'Mandatory', p.status = 'Active'
+                    MERGE (o)-[:ENFORCES {memoryState: 'Active', usageCount: 0, lastUsed: timestamp()}]->(p)
+                `, { orgId, polId, pol });
+            }
+        }
+
+        // 3. Enterprise Projects
+        if (projects && Array.isArray(projects)) {
+             for (const proj of projects) {
+                const projId = 'proj-ent-' + orgId + '-' + proj.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (o:Organization {id: $orgId})
+                    MERGE (p:Project {id: $projId}) ON CREATE SET p.name = $proj, p.type = 'Enterprise'
+                    MERGE (o)-[:OWNS]->(p)
+                `, { orgId, projId, proj });
+            }
+        }
+
+        res.json({ success: true, message: 'Enterprise Brain Onboarded' });
+    } catch (err: any) {
+        console.error("Enterprise Onboard Error:", err);
+        res.status(500).json({ error: err.message });
     } finally {
         await session.close();
     }
@@ -116,9 +187,32 @@ app.post('/api/enhance', async (req, res) => {
         await updateMemoryStates(selectedEdgeIds);
 
         // 4. Prepare Explainability Receipt & Context Pack
-        const contextPack = rankedContext.map(rc => rc.memory);
+        const rawMemories = rankedContext.map(rc => rc.memory);
+        
+        // Build the structural Context Pack according to the API Contract
+        const contextPack = {
+            identityContext: {
+                roles: rawMemories.filter(m => m.type === 'Role').map(m => m.content),
+                domains: rawMemories.filter(m => m.type === 'Domain').map(m => m.content)
+            },
+            projectContext: rawMemories.filter(m => m.type === 'Project').map(m => ({
+                id: m.id,
+                name: m.content
+            })),
+            taskContext: rawMemories.filter(m => m.type === 'Task').map(m => ({
+                id: m.id,
+                name: m.content
+            })),
+            styleContext: rawMemories.filter(m => m.type === 'Style').map(m => m.content),
+            policyContext: rawMemories.filter(m => m.type === 'Policy').map(m => ({
+                id: m.id,
+                ruleText: m.content
+            }))
+        };
+
         const explainabilityReceipt = rankedContext.map(rc => ({
-            node: rc.memory,
+            type: rc.memory.type,
+            name: rc.memory.content,
             reasons: rc.reasons,
             confidence: rc.confidence
         }));
@@ -143,6 +237,30 @@ app.post('/api/simulate-time', async (req, res) => {
         res.json({ success: true, message: `Simulated ${days} days passing. Memory states updated.` });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/user/:userId', async (req, res) => {
+    const session = getSession();
+    try {
+        await session.run(`MATCH (u:User {id: $userId}) DETACH DELETE u`, { userId: req.params.userId });
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
+    }
+});
+
+app.delete('/api/admin/clear', async (req, res) => {
+    const session = getSession();
+    try {
+        await session.run(`MATCH (n) DETACH DELETE n`);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
     }
 });
 

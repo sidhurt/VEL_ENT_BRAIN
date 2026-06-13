@@ -25,6 +25,18 @@ export const fetchAllMemories = async (userId: string): Promise<MemoryItem[]> =>
             UNION
             MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t:Team)-[:BELONGS_TO]->(o:Organization)-[e:ENFORCES]->(p:Policy)
             RETURN id(e) as edgeId, p.id as id, 'Policy' as type, p.ruleText as content, e.memoryState as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
+            UNION
+            MATCH (u:User {id: $userId})-[e:HAS_ROLE]->(r:Role)
+            RETURN id(e) as edgeId, r.id as id, 'Role' as type, r.name as content, 'Active' as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
+            UNION
+            MATCH (u:User {id: $userId})-[e:EXPERT_IN]->(d:Domain)
+            RETURN id(e) as edgeId, d.id as id, 'Domain' as type, d.name as content, 'Active' as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
+            UNION
+            MATCH (u:User {id: $userId})-[e:PERFORMS]->(t:Task)
+            RETURN id(e) as edgeId, t.id as id, 'Task' as type, t.name as content, e.memoryState as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
+            UNION
+            MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t:Team)-[:BELONGS_TO]->(o:Organization)-[e:OWNS]->(p:Project)
+            RETURN id(e) as edgeId, p.id as id, 'Project' as type, p.name as content, 'Active' as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
         `;
         const result = await session.run(query, { userId });
         
@@ -45,9 +57,29 @@ export const fetchAllMemories = async (userId: string): Promise<MemoryItem[]> =>
 export const rankAndSelectContext = (memories: MemoryItem[], prompt: string) => {
     const promptLower = prompt.toLowerCase();
     
-    const scoredMemories = memories.map(mem => {
+    // Deduplicate memories by ID before scoring to prevent edge collision issues
+    const uniqueMemoriesMap = new Map<string, MemoryItem>();
+    memories.forEach(mem => {
+        // If it exists, we could merge edge counts, but for MVP just taking the first one is enough
+        if (!uniqueMemoriesMap.has(mem.id)) {
+            uniqueMemoriesMap.set(mem.id, mem);
+        }
+    });
+    const deduplicatedMemories = Array.from(uniqueMemoriesMap.values());
+
+    const scoredMemories = deduplicatedMemories.map(mem => {
         let intentScore = 0;
         let reasons: string[] = [];
+
+        // Mandatory policies bypass ranking and are always forced in
+        if (mem.type === 'Policy') {
+            return {
+                memory: mem,
+                score: 10000,
+                reasons: ['Mandatory Enterprise Policy'],
+                confidence: 'High'
+            };
+        }
 
         // Basic intent matching
         const contentWords = mem.content.toLowerCase().split(/\s+/).filter(w => w.length > 3);
@@ -78,10 +110,10 @@ export const rankAndSelectContext = (memories: MemoryItem[], prompt: string) => 
         const now = Date.now();
         const daysSince = (now - mem.lastUsed) / (1000 * 60 * 60 * 24);
         let recencyScore = 0;
-        if (daysSince < 1) {
+        if (daysSince < 1 && mem.lastUsed > 0) {
             recencyScore = 15;
             reasons.push('Used recently');
-        } else if (daysSince < 7) {
+        } else if (daysSince < 7 && mem.lastUsed > 0) {
             recencyScore = 5;
         }
 
@@ -96,19 +128,24 @@ export const rankAndSelectContext = (memories: MemoryItem[], prompt: string) => 
             reasons.push('Baseline context');
         }
 
+        // Identity context (Role/Domain) should generally always be pulled if they are top-level
+        if ((mem.type === 'Role' || mem.type === 'Domain') && totalScore >= 0) {
+            totalScore += 100; // Base identity anchor
+        }
+
         return {
             memory: mem,
             score: totalScore,
             reasons,
-            confidence: totalScore > 80 ? 'High' : (totalScore > 40 ? 'Medium' : 'Low')
+            confidence: totalScore > 100 ? 'High' : (totalScore > 50 ? 'Medium' : 'Low')
         };
     });
 
     // Filter out negatively scored and sort
     const validMemories = scoredMemories.filter(sm => sm.score >= 0).sort((a, b) => b.score - a.score);
     
-    // Select top N (e.g., top 10)
-    const selected = validMemories.slice(0, 10);
+    // Select top N (e.g., top 15 total to accommodate role/domain + projects + policies)
+    const selected = validMemories.slice(0, 15);
     return selected;
 };
 
@@ -230,7 +267,7 @@ export const fetchGraphData = async (userId: string) => {
     try {
         const query = `
             MATCH path=(u:User {id: $userId})-[*0..2]-(n)
-            WHERE 'User' IN labels(n) OR 'Project' IN labels(n) OR 'Style' IN labels(n) OR 'Team' IN labels(n) OR 'Organization' IN labels(n) OR 'Policy' IN labels(n)
+            WHERE 'User' IN labels(n) OR 'Project' IN labels(n) OR 'Style' IN labels(n) OR 'Team' IN labels(n) OR 'Organization' IN labels(n) OR 'Policy' IN labels(n) OR 'Role' IN labels(n) OR 'Domain' IN labels(n) OR 'Task' IN labels(n)
             RETURN path
         `;
         const result = await session.run(query, { userId });
