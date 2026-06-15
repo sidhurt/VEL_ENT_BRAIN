@@ -1,112 +1,244 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThinkVelocity Unified Brain: Architecture Deep Dive</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(51, 65, 85, 0.5);
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.8); border-radius: 4px; }
+
+        h1, h2, h3, h4, h5, .font-heading {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-panel:hover {
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 0 8px 40px rgba(99, 102, 241, 0.15);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.4), inset 0 0 10px rgba(99, 102, 241, 0.2); }
+            50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.7), inset 0 0 20px rgba(168, 85, 247, 0.4); }
+        }
+
+        .bg-blob-1 { animation: float 15s ease-in-out infinite; }
+        .bg-blob-2 { animation: float 18s ease-in-out infinite reverse; }
+        
+        .btn-glow {
+            animation: pulse-glow 3s infinite;
+            background-size: 200% auto;
+            transition: 0.5s;
+        }
+        
+        .btn-glow:hover {
+            background-position: right center;
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Smooth transitions for interactive cards */
+        .card-interactive {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card-interactive:hover {
+            transform: translateY(-5px);
+        }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-300 min-h-screen relative overflow-x-hidden custom-scrollbar selection:bg-indigo-500/30">
+
+<body class="text-slate-300 min-h-screen relative overflow-x-hidden custom-scrollbar selection:bg-fuchsia-500/30">
+
+    <!-- Interactive Mouse Follower Glow (JS handles this) -->
+    <div id="cursor-glow" class="fixed w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none z-0 transform -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 opacity-0 hidden md:block"></div>
 
     <!-- Decorative Background Elements -->
     <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div class="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-600/10 blur-[120px] rounded-full mix-blend-screen"></div>
-        <div class="absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-fuchsia-600/10 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div class="bg-blob-1 absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div class="bg-blob-2 absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-fuchsia-600/20 blur-[120px] rounded-full mix-blend-screen"></div>
+        <div class="absolute top-[40%] left-[20%] w-[30%] h-[30%] bg-sky-500/10 blur-[100px] rounded-full mix-blend-screen animate-pulse"></div>
     </div>
 
     <!-- Header -->
-    <header class="sticky top-0 z-50 glass-panel px-8 py-5 flex justify-between items-center shadow-lg border-b border-slate-800">
+    <header class="sticky top-0 z-50 glass-panel px-6 py-4 flex flex-col md:flex-row gap-4 justify-between items-center border-b border-slate-800/80 transition-all duration-300" id="main-header">
         <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.5)]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] transform hover:rotate-12 transition-transform duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                    <path d="M2 12h20"></path>
+                </svg>
             </div>
             <div>
-                <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent tracking-wide">
-                    ThinkVelocity Unified Brain
+                <h1 class="text-2xl font-heading font-extrabold bg-gradient-to-r from-indigo-300 via-purple-300 to-fuchsia-300 bg-clip-text text-transparent tracking-tight">
+                    ThinkVelocity
                 </h1>
-                <p class="text-xs font-semibold tracking-widest text-slate-400 uppercase mt-1">Architecture & Mechanics Deep Dive</p>
+                <p class="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase mt-0.5">Unified Brain Architecture</p>
             </div>
         </div>
-        <div class="flex gap-2">
-            <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold uppercase tracking-widest">Confidential</span>
+        <div class="flex items-center gap-4">
+            <span class="hidden md:inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">Confidential</span>
+            <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank" class="btn-glow px-6 py-2.5 rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white font-bold text-sm tracking-wide shadow-lg border border-white/20 flex items-center gap-2 group cursor-pointer">
+                Launch Live Demo
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transform group-hover:translate-x-1 transition-transform">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="relative z-10 max-w-4xl mx-auto py-12 px-6 flex flex-col gap-8">
+    <main class="relative z-10 max-w-5xl mx-auto py-16 px-6 flex flex-col gap-12">
 
-        <!-- Intro -->
-        <div class="glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden group">
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-fuchsia-500 opacity-70 group-hover:opacity-100 transition-opacity"></div>
-            <p class="text-lg text-slate-300 leading-relaxed font-medium">
-                The Unified Brain is not a static database; it is a <strong class="text-indigo-300">living, dynamic knowledge graph</strong> that intelligently routes context to Language Models just-in-time (JIT). This document explains the ingenious mechanics beneath the surface—from graph topography and enterprise inheritance to the mathematical relevance engine that auto-evolves with user behaviour.
-            </p>
+        <!-- Hero Intro -->
+        <div class="animate-on-scroll flex flex-col items-center text-center mt-8 mb-4">
+            <div class="inline-block px-4 py-1.5 rounded-full bg-slate-800/50 border border-slate-700 text-indigo-300 text-xs font-bold tracking-widest uppercase mb-6 backdrop-blur-sm">
+                Next-Gen Context Routing
+            </div>
+            <h2 class="text-5xl md:text-7xl font-heading font-extrabold text-white mb-8 leading-tight tracking-tight">
+                The Living, Dynamic <br/> <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent">Knowledge Graph</span>
+            </h2>
+            <div class="glass-panel rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden group max-w-3xl w-full text-left card-interactive">
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-fuchsia-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 opacity-70 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <p class="text-lg md:text-xl text-slate-300 leading-relaxed font-light">
+                    The Unified Brain is not a static database. It intelligently routes context to Language Models <strong class="text-white font-semibold">just-in-time (JIT)</strong>. 
+                    This document explains the ingenious mechanics beneath the surface—from graph topography and enterprise inheritance to the mathematical relevance engine that auto-evolves with user behavior.
+                </p>
+                <div class="mt-8 flex justify-center">
+                    <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank" class="px-8 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium transition-colors flex items-center gap-3 backdrop-blur-sm">
+                        Experience the AI Context Engine
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Section 1 -->
-        <section class="glass-panel rounded-2xl p-8 shadow-xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">1</div>
-                <h2 class="text-xl font-bold text-slate-100">The Core Philosophy: Why a Graph Database?</h2>
+        <section class="animate-on-scroll glass-panel rounded-3xl p-8 md:p-10 shadow-xl card-interactive relative overflow-hidden">
+            <div class="absolute right-0 top-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center text-indigo-400 font-heading font-black text-lg shadow-inner">
+                    1</div>
+                <h2 class="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">The Core Philosophy: Why a Graph?</h2>
             </div>
-            <div class="space-y-4 text-slate-400 leading-relaxed text-sm">
-                <p>Most LLM wrappers dump user preferences into a flat JSON file or a Vector Database (RAG). This fails at scale because <em class="text-slate-300">context is inherently relationship-driven</em>.</p>
-                <p>In the Unified Brain, we use <strong class="text-indigo-400">Neo4j</strong>. Every employee, project, skill, and company rule is a Node. The connections between them are Edges.</p>
-                <div class="p-4 bg-slate-950/80 rounded-xl border border-slate-800 font-mono text-xs text-indigo-300/80 shadow-inner overflow-x-auto">
-                    By structuring data this way, we don't have to write complex SQL joins to figure out which rules apply to which user. We simply traverse the graph:<br><br>
-                    <span class="text-fuchsia-400">[User]</span> -> <span class="text-slate-500">[:MEMBER_OF]</span> -> <span class="text-sky-400">[Team]</span> -> <span class="text-slate-500">[:BELONGS_TO]</span> -> <span class="text-indigo-400">[Organization]</span> -> <span class="text-slate-500">[:ENFORCES]</span> -> <span class="text-rose-400">[Policy]</span>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="space-y-4 text-slate-400 leading-relaxed">
+                    <p class="text-base">Most LLM wrappers dump user preferences into a flat JSON file or a standard Vector Database (RAG). This fails at scale because <em class="text-indigo-300 not-italic font-medium">context is inherently relationship-driven</em>.</p>
+                    <p class="text-base">In the Unified Brain, we use <strong class="text-white">Neo4j</strong>. Every employee, project, skill, and company rule is a Node. The connections between them are Edges.</p>
+                </div>
+                <div class="p-6 bg-[#0B1121] rounded-2xl border border-slate-800/80 font-mono text-sm shadow-inner overflow-x-auto relative group">
+                    <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <p class="text-slate-500 mb-4 text-xs">No complex SQL joins. We simply traverse the graph:</p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs md:text-sm">
+                        <span class="px-2 py-1 bg-fuchsia-500/10 text-fuchsia-400 rounded-md border border-fuchsia-500/20">[User]</span> 
+                        <span class="text-slate-600">→</span> 
+                        <span class="text-slate-500 italic">[:MEMBER_OF]</span> 
+                        <span class="text-slate-600">→</span>
+                        <span class="px-2 py-1 bg-sky-500/10 text-sky-400 rounded-md border border-sky-500/20">[Team]</span> 
+                        <span class="text-slate-600">→</span> 
+                        <span class="text-slate-500 italic">[:BELONGS_TO]</span> 
+                        <span class="text-slate-600">→</span>
+                        <span class="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20">[Org]</span> 
+                        <span class="text-slate-600">→</span> 
+                        <span class="text-slate-500 italic">[:ENFORCES]</span> 
+                        <span class="text-slate-600">→</span> 
+                        <span class="px-2 py-1 bg-rose-500/10 text-rose-400 rounded-md border border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.2)]">[Policy]</span>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Section 2 -->
-        <section class="glass-panel rounded-2xl p-8 shadow-xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">2</div>
-                <h2 class="text-xl font-bold text-slate-100">Graph Seeding & Topography</h2>
+        <section class="animate-on-scroll glass-panel rounded-3xl p-8 md:p-10 shadow-xl relative overflow-hidden">
+            <div class="absolute left-0 bottom-0 w-64 h-64 bg-fuchsia-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center text-indigo-400 font-heading font-black text-lg shadow-inner">
+                    2</div>
+                <h2 class="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">Graph Seeding & Topography</h2>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                 <!-- Personal -->
-                <div class="p-5 bg-slate-900/50 rounded-xl border border-slate-800/80">
-                    <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        The Personal Brain
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Owned by the individual user. When an employee fills out their onboarding form, the system generates:</p>
-                    <ul class="space-y-2 text-xs text-slate-300 font-medium">
-                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> A central <code class="bg-slate-800 px-1 rounded text-indigo-300">User</code> node (the anchor).</li>
-                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Role</code> and <code class="bg-slate-800 px-1 rounded text-indigo-300">Domain</code> nodes linked via <code class="text-slate-500">[:HAS_ROLE]</code> and <code class="text-slate-500">[:EXPERT_IN]</code>.</li>
-                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Project</code> and <code class="bg-slate-800 px-1 rounded text-indigo-300">Task</code> nodes linked via <code class="text-slate-500">[:WORKS_ON]</code> and <code class="text-slate-500">[:PERFORMS]</code>.</li>
-                        <li class="flex gap-2 items-start"><span class="text-indigo-500">•</span> <code class="bg-slate-800 px-1 rounded text-indigo-300">Style</code> nodes defining tone of voice.</li>
+                <div class="p-6 md:p-8 bg-slate-900/60 rounded-2xl border border-slate-800 hover:border-indigo-500/30 transition-colors card-interactive backdrop-blur-sm">
+                    <div class="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-heading font-bold text-indigo-300 mb-3">The Personal Brain</h3>
+                    <p class="text-sm text-slate-400 mb-6 leading-relaxed">Owned by the individual user. Automatically generated upon onboarding:</p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex gap-3 items-start"><div class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5"></div> A central <code class="bg-indigo-500/10 text-indigo-300 px-1.5 py-0.5 rounded text-xs border border-indigo-500/20">User</code> anchor node.</li>
+                        <li class="flex gap-3 items-start"><div class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5"></div> <code class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-xs border border-slate-700">Role</code> and <code class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-xs border border-slate-700">Domain</code> linked via <code class="text-slate-500 text-xs italic">[:HAS_ROLE]</code>.</li>
+                        <li class="flex gap-3 items-start"><div class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5"></div> <code class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-xs border border-slate-700">Project</code> nodes linked via <code class="text-slate-500 text-xs italic">[:WORKS_ON]</code>.</li>
                     </ul>
                 </div>
 
                 <!-- Enterprise -->
-                <div class="p-5 bg-slate-900/50 rounded-xl border border-slate-800/80">
-                    <h3 class="text-sm font-bold text-fuchsia-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                        The Company Brain
-                    </h3>
-                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Owned by the admin. When an enterprise is established:</p>
-                    <ul class="space-y-2 text-xs text-slate-300 font-medium">
-                        <li class="flex gap-2 items-start"><span class="text-fuchsia-500">•</span> <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Organization</code> and <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Team</code> nodes are created.</li>
-                        <li class="flex gap-2 items-start"><span class="text-fuchsia-500">•</span> <code class="bg-slate-800 px-1 rounded text-fuchsia-300">Policy</code> nodes (e.g., "No PII") are attached via <code class="text-slate-500">[:ENFORCES]</code>.</li>
-                        <li class="flex gap-2 items-start bg-slate-800/50 p-2 rounded border border-slate-700/50 mt-2">
-                            <span class="text-fuchsia-400 font-bold">The Magic Link:</span> When a user is added, a <code class="text-slate-500 text-[10px]">[:MEMBER_OF]</code> edge is drawn. Instantly, the user inherits every policy and enterprise project via graph traversal. Zero data duplication occurs.
+                <div class="p-6 md:p-8 bg-slate-900/60 rounded-2xl border border-slate-800 hover:border-fuchsia-500/30 transition-colors card-interactive backdrop-blur-sm">
+                    <div class="w-12 h-12 rounded-full bg-fuchsia-500/10 flex items-center justify-center mb-6 border border-fuchsia-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-heading font-bold text-fuchsia-300 mb-3">The Company Brain</h3>
+                    <p class="text-sm text-slate-400 mb-6 leading-relaxed">Owned by the admin. Establishes the guardrails:</p>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex gap-3 items-start"><div class="w-1.5 h-1.5 rounded-full bg-fuchsia-500 mt-1.5"></div> <code class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-xs border border-slate-700">Organization</code> and <code class="bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded text-xs border border-slate-700">Team</code> hierarchies.</li>
+                        <li class="flex gap-3 items-start"><div class="w-1.5 h-1.5 rounded-full bg-fuchsia-500 mt-1.5"></div> <code class="bg-rose-500/10 text-rose-300 px-1.5 py-0.5 rounded text-xs border border-rose-500/20">Policy</code> nodes enforced globally.</li>
+                        <li class="mt-4 p-4 bg-gradient-to-br from-slate-800 to-[#0B1121] rounded-xl border border-slate-700 shadow-inner">
+                            <span class="text-fuchsia-400 font-bold block mb-1">The Magic Link</span>
+                            <span class="text-xs text-slate-400">Users inherit every policy and enterprise project via instantaneous graph traversal. Zero data duplication.</span>
                         </li>
                     </ul>
                 </div>
@@ -114,160 +246,231 @@
         </section>
 
         <!-- Section 3 -->
-        <section class="glass-panel rounded-2xl p-8 shadow-xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">3</div>
-                <h2 class="text-xl font-bold text-slate-100">The Memory Relevance Engine</h2>
+        <section class="animate-on-scroll glass-panel rounded-3xl p-8 md:p-10 shadow-xl">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center text-indigo-400 font-heading font-black text-lg shadow-inner">
+                    3</div>
+                <h2 class="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">The Memory Relevance Engine</h2>
             </div>
-            <p class="text-sm text-slate-400 mb-6 leading-relaxed">
-                When the Velocity Browser Extension intercepts a prompt, it makes a silent API call to <code class="bg-slate-800 text-slate-300 px-1 rounded">/api/enhance</code>. The Brain must decide exactly what 15 pieces of context to send back. It does this via a sophisticated scoring algorithm.
+            <p class="text-base text-slate-400 mb-8 leading-relaxed max-w-3xl">
+                When a prompt is intercepted, a silent call hits <code class="bg-slate-800/80 text-white px-2 py-1 rounded text-sm border border-slate-700">/api/enhance</code>. The Brain must instantly decide exactly what <strong class="text-indigo-300">15 pieces of context</strong> to send back using our 5-dimensional scoring algorithm.
             </p>
 
-            <div class="space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Scoring Dimensions -->
-                <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800">
-                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">The 5-Dimensional Scoring Algorithm</h3>
-                    <div class="grid grid-cols-1 gap-3">
-                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                            <div class="w-12 text-center text-indigo-400 font-bold font-mono">+15x</div>
+                <div class="lg:col-span-2 p-6 bg-[#0B1121] rounded-2xl border border-slate-800/80 shadow-inner">
+                    <h3 class="text-sm font-heading font-bold text-slate-300 uppercase tracking-widest mb-6 flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                        The Algorithm Weights
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-start gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-indigo-500/30 transition-colors">
+                            <div class="text-indigo-400 font-heading font-black text-xl mt-1 w-12 text-center">+15x</div>
                             <div>
-                                <span class="text-sm font-bold text-slate-200">Intent Matching (Keywords)</span>
-                                <p class="text-xs text-slate-400 mt-1">Base +20, plus +15 per matched word between prompt and node content.</p>
+                                <span class="text-sm font-bold text-white block mb-1">Intent Matching</span>
+                                <p class="text-xs text-slate-400 leading-relaxed">Base +20, plus +15 per matched word between prompt and node.</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                            <div class="w-12 text-center text-emerald-400 font-bold font-mono">+50</div>
+                        <div class="flex items-start gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-emerald-500/30 transition-colors">
+                            <div class="text-emerald-400 font-heading font-black text-xl mt-1 w-12 text-center">+50</div>
                             <div>
-                                <span class="text-sm font-bold text-slate-200">State Score (Lifecycle)</span>
-                                <p class="text-xs text-slate-400 mt-1">Active = 50. Recent = 20. Archived = 0.</p>
+                                <span class="text-sm font-bold text-white block mb-1">State Score</span>
+                                <p class="text-xs text-slate-400 leading-relaxed">Active = 50. Recent = 20. Archived = 0.</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                            <div class="w-12 text-center text-sky-400 font-bold font-mono">2x</div>
+                        <div class="flex items-start gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-sky-500/30 transition-colors">
+                            <div class="text-sky-400 font-heading font-black text-xl mt-1 w-12 text-center">2x</div>
                             <div>
-                                <span class="text-sm font-bold text-slate-200">Frequency Score</span>
-                                <p class="text-xs text-slate-400 mt-1">Usage Count × 2. Rewards heavily traversed paths.</p>
+                                <span class="text-sm font-bold text-white block mb-1">Frequency Multiplier</span>
+                                <p class="text-xs text-slate-400 leading-relaxed">Usage Count × 2. Rewards heavily traversed, proven paths.</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                            <div class="w-12 text-center text-amber-400 font-bold font-mono">+15</div>
+                        <div class="flex items-start gap-4 bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-fuchsia-500/30 transition-colors">
+                            <div class="text-fuchsia-400 font-heading font-black text-xl mt-1 w-12 text-center">+100</div>
                             <div>
-                                <span class="text-sm font-bold text-slate-200">Recency Score</span>
-                                <p class="text-xs text-slate-400 mt-1">Used in last 24h = +15. Used in last 7 days = +5.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
-                            <div class="w-12 text-center text-fuchsia-400 font-bold font-mono">+100</div>
-                            <div>
-                                <span class="text-sm font-bold text-slate-200">Identity Anchors</span>
-                                <p class="text-xs text-slate-400 mt-1">Roles & Domains get massive boosts so the LLM always knows who is speaking.</p>
+                                <span class="text-sm font-bold text-white block mb-1">Identity Anchors</span>
+                                <p class="text-xs text-slate-400 leading-relaxed">Roles & Domains get massive boosts to maintain persona.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Governance Override -->
-                <div class="p-5 bg-rose-950/20 rounded-xl border border-rose-900/30 flex gap-4 items-start relative overflow-hidden">
-                    <div class="absolute right-0 top-0 w-32 h-32 bg-rose-600/10 rounded-full blur-2xl"></div>
-                    <svg class="text-rose-400 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                    <div>
-                        <h3 class="text-sm font-bold text-rose-400 uppercase tracking-widest mb-1">The Enterprise Governance Override</h3>
-                        <p class="text-xs text-rose-200/70 leading-relaxed">If an admin sets a company rule, it cannot be bypassed. The algorithm automatically assigns any node of type `Policy` a score of <strong class="text-rose-400 text-sm">10,000</strong>. This guarantees that enterprise compliance will win every single context assembly race and be injected into the final prompt.</p>
+                <div class="p-6 bg-gradient-to-b from-rose-950/40 to-slate-900 rounded-2xl border border-rose-900/50 flex flex-col relative overflow-hidden card-interactive">
+                    <div class="absolute right-0 top-0 w-32 h-32 bg-rose-600/20 rounded-full blur-3xl"></div>
+                    <div class="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center mb-4 border border-rose-500/30 text-rose-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-base font-heading font-bold text-rose-300 mb-3">Enterprise Governance Override</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-4 flex-grow">Company rules cannot be bypassed by an AI.</p>
+                    <div class="p-3 bg-rose-950/50 rounded-lg border border-rose-900/80">
+                        <p class="text-xs text-rose-200">The algorithm assigns any <code class="text-rose-400 font-bold bg-black/30 px-1 rounded">Policy</code> a score of <strong class="text-white text-base block mt-1">10,000 pts</strong></p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Section 4 -->
-        <section class="glass-panel rounded-2xl p-8 shadow-xl">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">4</div>
-                <h2 class="text-xl font-bold text-slate-100">Organic Auto-Evolution</h2>
+        <section class="animate-on-scroll glass-panel rounded-3xl p-8 md:p-10 shadow-xl">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center text-indigo-400 font-heading font-black text-lg shadow-inner">
+                    4</div>
+                <h2 class="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">Organic Auto-Evolution</h2>
             </div>
-            <p class="text-sm text-slate-400 mb-6 leading-relaxed">
-                There are no "interact" buttons. The graph learns silently based on the user's API requests.
+            <p class="text-base text-slate-400 mb-8 max-w-2xl">
+                There are no "manage" buttons. The graph learns silently and continuously based on natural API requests.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
-                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">Strengthening via Usage</h4>
-                    <p class="text-xs text-slate-400 leading-relaxed">Every time the engine selects a node, <code class="text-slate-500">updateMemoryStates</code> fires. It increments <code class="text-slate-500">usageCount</code> and updates <code class="text-slate-500">lastUsed</code> to right now.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="p-5 bg-[#0B1121] rounded-2xl border border-slate-800/80 hover:-translate-y-2 transition-transform duration-300 hover:border-emerald-500/40 hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.2)]">
+                    <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Strengthening</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Every selection fires <code class="text-slate-300">updateMemoryStates</code>, incrementing <code class="text-slate-300">usageCount</code> to build strong neurological pathways.</p>
                 </div>
-                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
-                    <h4 class="text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">Auto-Resurrection</h4>
-                    <p class="text-xs text-slate-400 leading-relaxed">If an archived project is specifically mentioned in a prompt (high Intent Score), it is pulled into the payload and instantly upgraded back to <code class="text-slate-500">Active</code>.</p>
+                <div class="p-5 bg-[#0B1121] rounded-2xl border border-slate-800/80 hover:-translate-y-2 transition-transform duration-300 hover:border-sky-500/40 hover:shadow-[0_10px_30px_-10px_rgba(14,165,233,0.2)]">
+                    <h4 class="text-xs font-bold text-sky-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Resurrection</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">If an archived project is mentioned, high intent scores yank it back to <code class="text-slate-300">Active</code> instantly.</p>
                 </div>
-                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
-                    <h4 class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">Organic Decay</h4>
-                    <p class="text-xs text-slate-400 leading-relaxed"><code class="text-slate-500">decayMemories</code> simulates time. Edge traversal drops to <code class="text-slate-500">Recent</code> after 7 days, and <code class="text-slate-500">Archived</code> after 30 days of no use.</p>
+                <div class="p-5 bg-[#0B1121] rounded-2xl border border-slate-800/80 hover:-translate-y-2 transition-transform duration-300 hover:border-amber-500/40 hover:shadow-[0_10px_30px_-10px_rgba(245,158,11,0.2)]">
+                    <h4 class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Organic Decay</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Traversals drop to <code class="text-slate-300">Recent</code> after 7 days, and <code class="text-slate-300">Archived</code> after 30 days of neglect.</p>
                 </div>
-                <div class="p-4 bg-slate-900/40 rounded-lg border border-slate-800">
-                    <h4 class="text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">The Archive Penalty</h4>
-                    <p class="text-xs text-slate-400 leading-relaxed">Archived memories receive a <strong class="text-rose-400">-1000 point penalty</strong>. They are actively hidden to save tokens and reduce LLM hallucinations, unless explicitly invoked.</p>
+                <div class="p-5 bg-[#0B1121] rounded-2xl border border-slate-800/80 hover:-translate-y-2 transition-transform duration-300 hover:border-rose-500/40 hover:shadow-[0_10px_30px_-10px_rgba(244,63,94,0.2)]">
+                    <h4 class="text-xs font-bold text-rose-400 uppercase tracking-widest mb-3 border-b border-slate-800 pb-2">Archive Penalty</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed">Archived memories receive a <strong class="text-rose-400">-1000pt</strong> penalty to actively prevent LLM hallucinations.</p>
                 </div>
             </div>
         </section>
 
         <!-- Section 5 -->
-        <section class="glass-panel rounded-2xl p-8 shadow-xl relative overflow-hidden">
-            <div class="absolute right-0 bottom-0 opacity-10">
-                <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
-            </div>
-            <div class="flex items-center gap-3 mb-6 relative z-10">
-                <div class="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 font-bold">5</div>
-                <h2 class="text-xl font-bold text-slate-100">Velocity Prompt Engine Integration</h2>
+        <section class="animate-on-scroll glass-panel rounded-3xl p-8 md:p-12 shadow-xl relative overflow-hidden bg-gradient-to-br from-indigo-950/40 to-slate-900/40">
+            <div class="absolute right-[-5%] bottom-[-10%] opacity-5 pointer-events-none transform rotate-12 scale-150">
+                <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
             </div>
             
-            <p class="text-sm text-slate-400 mb-6 leading-relaxed relative z-10">
-                The Unified Brain operates as a headless, Just-In-Time (JIT) microservice.
-            </p>
-
-            <div class="relative z-10">
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">1</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-200">Intercept</h4>
-                        <p class="text-xs text-slate-400">The user types in ChatGPT. The Velocity extension pauses the request.</p>
+            <div class="flex flex-col md:flex-row gap-12 items-center relative z-10">
+                <div class="flex-1">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-heading font-black text-lg shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                            5</div>
+                        <h2 class="text-2xl md:text-3xl font-heading font-bold text-white tracking-tight">The JIT Microservice Workflow</h2>
+                    </div>
+                    <p class="text-base text-slate-300 mb-8 leading-relaxed">
+                        The Unified Brain operates as a lightning-fast headless engine. User experiences zero latency.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex gap-4 group">
+                            <div class="flex flex-col items-center">
+                                <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300 text-sm font-bold group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-400 transition-colors z-10">1</div>
+                                <div class="w-px h-full bg-slate-800 group-hover:bg-indigo-500/50 transition-colors my-1"></div>
+                            </div>
+                            <div class="pb-2">
+                                <h4 class="text-base font-bold text-white">Intercept & Request</h4>
+                                <p class="text-sm text-slate-400 mt-1">Browser extension pauses OpenAI request and silently POSTs to the Brain API.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 group">
+                            <div class="flex flex-col items-center">
+                                <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300 text-sm font-bold group-hover:bg-fuchsia-500 group-hover:text-white group-hover:border-fuchsia-400 transition-colors z-10">2</div>
+                                <div class="w-px h-full bg-slate-800 group-hover:bg-fuchsia-500/50 transition-colors my-1"></div>
+                            </div>
+                            <div class="pb-2">
+                                <h4 class="text-base font-bold text-white">Assembly & Delivery</h4>
+                                <p class="text-sm text-slate-400 mt-1">Algorithm scores nodes, compiles the perfect JSON ContextPack, and returns it.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 group">
+                            <div class="flex flex-col items-center">
+                                <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-slate-300 text-sm font-bold group-hover:bg-emerald-500 group-hover:text-white group-hover:border-emerald-400 transition-colors z-10">3</div>
+                            </div>
+                            <div class="pb-0">
+                                <h4 class="text-base font-bold text-white">Injection & Execution</h4>
+                                <p class="text-sm text-slate-400 mt-1">Context is hidden in system prompt. LLM executes perfectly tailored to enterprise rules.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">2</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-200">Request</h4>
-                        <p class="text-xs text-slate-400">The extension silently POSTs to the Unified Brain API.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">3</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-200">Assembly</h4>
-                        <p class="text-xs text-slate-400">The Brain runs the Scoring Algorithm, pulling the top 15 nodes + all 10,000-point Policies.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">4</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-200">Delivery</h4>
-                        <p class="text-xs text-slate-400">The Brain returns a structured JSON <code class="text-slate-300">ContextPack</code>.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-4 mb-4">
-                    <div class="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5 shrink-0">5</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-200">Injection</h4>
-                        <p class="text-xs text-slate-400">The extension formats that JSON into a hidden system prompt.</p>
-                    </div>
-                </div>
-                <div class="flex items-start gap-4">
-                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-xs font-bold mt-0.5 shrink-0">6</div>
-                    <div>
-                        <h4 class="text-sm font-bold text-emerald-400">Execution</h4>
-                        <p class="text-xs text-emerald-200/70">The massively enhanced prompt is forwarded to OpenAI. The user experiences zero latency, but receives an LLM response perfectly tailored to their identity, active projects, and legal boundaries.</p>
+                
+                <div class="flex-1 flex justify-center w-full">
+                    <div class="glass-panel p-8 rounded-3xl w-full text-center border-indigo-500/30 shadow-[0_0_50px_rgba(99,102,241,0.15)] bg-gradient-to-b from-indigo-950/50 to-[#020617]">
+                        <h3 class="text-2xl font-heading font-bold text-white mb-4">Ready to see it live?</h3>
+                        <p class="text-sm text-slate-400 mb-8">Test the full frontend interface and see the graph context engine in action.</p>
+                        <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank" class="btn-glow inline-flex w-full justify-center px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 text-white font-bold text-lg tracking-wide shadow-2xl border border-white/20 items-center gap-3 hover:scale-105 transition-transform duration-300">
+                            Launch Unified Brain
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
                     </div>
                 </div>
             </div>
         </section>
 
     </main>
+    
+    <footer class="border-t border-slate-800/80 py-8 text-center mt-12 bg-[#020617]/80 backdrop-blur-md relative z-10">
+        <p class="text-xs text-slate-500 font-medium">&copy; 2026 ThinkVelocity. Confidential Architecture Document.</p>
+    </footer>
 
+    <!-- Interactive Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Intersection Observer for Scroll Animations
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.animate-on-scroll').forEach((el, index) => {
+                // Add slight stagger
+                el.style.transitionDelay = `${index * 50}ms`;
+                observer.observe(el);
+            });
+
+            // Interactive Cursor Glow Effect
+            const glow = document.getElementById('cursor-glow');
+            if (window.matchMedia("(min-width: 768px)").matches) {
+                document.addEventListener('mousemove', (e) => {
+                    glow.style.left = e.clientX + 'px';
+                    glow.style.top = e.clientY + 'px';
+                    glow.style.opacity = '1';
+                });
+                
+                document.addEventListener('mouseleave', () => {
+                    glow.style.opacity = '0';
+                });
+            }
+
+            // Header Background Blur on Scroll
+            const header = document.getElementById('main-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 20) {
+                    header.classList.add('bg-[#020617]/80', 'backdrop-blur-xl', 'shadow-lg');
+                    header.classList.remove('py-4');
+                    header.classList.add('py-3');
+                } else {
+                    header.classList.remove('bg-[#020617]/80', 'backdrop-blur-xl', 'shadow-lg');
+                    header.classList.add('py-4');
+                    header.classList.remove('py-3');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

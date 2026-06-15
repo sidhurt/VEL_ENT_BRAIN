@@ -266,7 +266,7 @@ export const fetchGraphData = async (userId: string) => {
     const session = getSession();
     try {
         const query = `
-            MATCH path=(u:User {id: $userId})-[*0..2]-(n)
+            MATCH path=(u:User {id: $userId})-[*0..3]-(n)
             WHERE 'User' IN labels(n) OR 'Project' IN labels(n) OR 'Style' IN labels(n) OR 'Team' IN labels(n) OR 'Organization' IN labels(n) OR 'Policy' IN labels(n) OR 'Role' IN labels(n) OR 'Domain' IN labels(n) OR 'Task' IN labels(n)
             RETURN path
         `;
@@ -308,3 +308,156 @@ export const fetchGraphData = async (userId: string) => {
         await session.close();
     }
 }
+
+export const fetchEvolutionMetrics = async (userId: string) => {
+    const session = getSession();
+    try {
+        // 1. Health (State counts)
+        const stateQuery = `
+            MATCH (u:User {id: $userId})-[e]->()
+            WHERE type(e) IN ['WORKS_ON', 'HAS_STYLE', 'PERFORMS']
+            RETURN e.memoryState as state, count(e) as count
+            UNION
+            MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t)-[e:ENFORCES]->()
+            RETURN e.memoryState as state, count(e) as count
+            UNION
+            MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t)-[:BELONGS_TO]->(o)-[e:ENFORCES]->()
+            RETURN e.memoryState as state, count(e) as count
+        `;
+        const stateResult = await session.run(stateQuery, { userId });
+        
+        let health = { Active: 0, Recent: 0, Archived: 0 };
+        stateResult.records.forEach(r => {
+            const state = r.get('state');
+            const count = r.get('count').toNumber ? r.get('count').toNumber() : Number(r.get('count'));
+            if (state === 'Active') health.Active += count;
+            else if (state === 'Recent') health.Recent += count;
+            else if (state === 'Archived') health.Archived += count;
+        });
+
+        // 2. Top Usages (Relevance Trends)
+        const usageQuery = `
+            MATCH (u:User {id: $userId})-[e]->(n)
+            WHERE type(e) IN ['WORKS_ON', 'PERFORMS', 'HAS_STYLE'] AND e.usageCount > 0
+            RETURN labels(n)[0] as type, coalesce(n.name, n.formattingRules) as name, e.usageCount as usageCount, e.memoryState as state
+            ORDER BY e.usageCount DESC
+            LIMIT 10
+        `;
+        const usageResult = await session.run(usageQuery, { userId });
+        const topUsages = usageResult.records.map(r => ({
+            type: r.get('type'),
+            name: r.get('name'),
+            usageCount: r.get('usageCount').toNumber ? r.get('usageCount').toNumber() : Number(r.get('usageCount')),
+            state: r.get('state')
+        }));
+
+        // 3. Enterprise Inheritance
+        const entQuery = `
+            MATCH (u:User {id: $userId})-[:MEMBER_OF]->(t)-[:BELONGS_TO]->(o)
+            OPTIONAL MATCH (o)-[e:ENFORCES]->(p:Policy)
+            RETURN coalesce(o.name, 'Unknown') as orgName, collect(p.ruleText) as policies
+        `;
+        const entResult = await session.run(entQuery, { userId });
+        let inheritance = { orgName: '', policies: [] as string[] };
+        if (entResult.records.length > 0) {
+            inheritance.orgName = entResult.records[0].get('orgName');
+            inheritance.policies = entResult.records[0].get('policies').filter((p:any) => p !== null);
+        }
+
+        // 4. Graph Metrics
+        const sizeQuery = `
+            MATCH path=(u:User {id: $userId})-[*1..2]-(n)
+            RETURN count(DISTINCT n) as nodes, count(DISTINCT relationships(path)[0]) as edges
+        `;
+        const sizeResult = await session.run(sizeQuery, { userId });
+        const metrics = {
+            nodes: sizeResult.records.length > 0 ? (sizeResult.records[0].get('nodes').toNumber ? sizeResult.records[0].get('nodes').toNumber() : Number(sizeResult.records[0].get('nodes'))) : 0,
+            edges: sizeResult.records.length > 0 ? (sizeResult.records[0].get('edges').toNumber ? sizeResult.records[0].get('edges').toNumber() : Number(sizeResult.records[0].get('edges'))) : 0
+        };
+
+        return { health, topUsages, inheritance, metrics };
+    } finally {
+        await session.close();
+    }
+}
+
+export const seedDemoPersonas = async () => {
+    const session = getSession();
+    try {
+        const clearQuery = `
+            // Clear existing demo nodes
+            MATCH (n) WHERE n.id IN ['org-velocity-media', 'team-velocity-hq', 'pol-prof', 'pol-nospec', 'pol-conf', 'user-emma', 'user-siddharth', 'user-michael', 'role-emma', 'role-siddharth', 'role-michael', 'proj-emma', 'proj-siddharth', 'proj-michael', 'style-emma', 'domain-siddharth-aws', 'domain-siddharth-sap', 'domain-michael']
+            DETACH DELETE n
+        `;
+        await session.run(clearQuery);
+
+        const seedQuery = `
+            // Create Enterprise
+            CREATE (org:Organization {id: 'org-velocity-media', name: 'Velocity Media'})
+            CREATE (team:Team {id: 'team-velocity-hq', name: 'Velocity HQ'})
+            CREATE (team)-[:BELONGS_TO]->(org)
+
+            // Create Enterprise Policies
+            CREATE (pol1:Policy {id: 'pol-prof', ruleText: 'Professional Communication Only'})
+            CREATE (pol2:Policy {id: 'pol-nospec', ruleText: 'No Speculation Presented As Fact'})
+            CREATE (pol3:Policy {id: 'pol-conf', ruleText: 'Client Confidentiality'})
+            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol1)
+            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol2)
+            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol3)
+
+            // Emma
+            CREATE (u1:User {id: 'user-emma', role: 'Senior Content Strategy Manager', name: 'Emma Johnson'})
+            CREATE (u1)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            CREATE (r1:Role {id: 'role-emma', name: 'Senior Content Strategy Manager'})
+            CREATE (u1)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r1)
+            CREATE (p1:Project {id: 'proj-emma', name: 'Enterprise AI Adoption Program'})
+            CREATE (u1)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p1)
+            CREATE (s1:Style {id: 'style-emma', formattingRules: 'Casual Communication, Use Bullet Points'})
+            CREATE (u1)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s1)
+            CREATE (d1a:Domain {id: 'domain-emma-gov', name: 'Content Governance'})
+            CREATE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1a)
+            CREATE (d1b:Domain {id: 'domain-emma-marketing', name: 'Digital Marketing'})
+            CREATE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1b)
+            CREATE (t1:Task {id: 'task-emma-review', name: 'Content Review'})
+            CREATE (u1)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t1)
+
+            // Siddharth
+            CREATE (u2:User {id: 'user-siddharth', role: 'Enterprise Architect', name: 'Siddharth S.'})
+            CREATE (u2)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            CREATE (r2:Role {id: 'role-siddharth', name: 'Enterprise Architect'})
+            CREATE (u2)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r2)
+            CREATE (p2a:Project {id: 'proj-siddharth-ub', name: 'Unified Brain Architecture'})
+            CREATE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2a)
+            CREATE (p2b:Project {id: 'proj-siddharth-dms', name: 'DMS Integration'})
+            CREATE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2b)
+            CREATE (d2a:Domain {id: 'domain-siddharth-aws', name: 'AWS'})
+            CREATE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2a)
+            CREATE (d2b:Domain {id: 'domain-siddharth-sap', name: 'SAP Integration'})
+            CREATE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2b)
+            CREATE (t2:Task {id: 'task-siddharth-arch', name: 'Architecture Review'})
+            CREATE (u2)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t2)
+            CREATE (s2:Style {id: 'style-siddharth', formattingRules: 'Direct, structured, technical depth'})
+            CREATE (u2)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s2)
+
+            // Michael
+            CREATE (u3:User {id: 'user-michael', role: 'Client Success Director', name: 'Michael T.'})
+            CREATE (u3)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            CREATE (r3:Role {id: 'role-michael', name: 'Client Success Director'})
+            CREATE (u3)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r3)
+            CREATE (p3:Project {id: 'proj-michael', name: 'Revenue Intelligence Platform'})
+            CREATE (u3)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p3)
+            CREATE (d3a:Domain {id: 'domain-michael-research', name: 'Customer Research'})
+            CREATE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3a)
+            CREATE (d3b:Domain {id: 'domain-michael-sales', name: 'Enterprise Sales'})
+            CREATE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3b)
+            CREATE (t3:Task {id: 'task-michael-qbr', name: 'QBR Preparation'})
+            CREATE (u3)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t3)
+            CREATE (s3:Style {id: 'style-michael', formattingRules: 'Professional, empathetic, focus on ROI'})
+            CREATE (u3)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s3)
+        `;
+        await session.run(seedQuery);
+    } finally {
+        await session.close();
+    }
+}
+
