@@ -75,8 +75,19 @@ function App() {
                 >
                     Michael (Success)
                 </button>
+                <form 
+                    onSubmit={(e) => { 
+                        e.preventDefault(); 
+                        const val = (e.target as any).elements.uid.value.trim(); 
+                        if(val) setUserId(val); 
+                    }} 
+                    className="flex items-center ml-2 border-l border-slate-700/50 pl-3"
+                >
+                    <input name="uid" type="text" placeholder="Custom User ID..." className="bg-slate-950 border border-slate-700/50 text-xs px-2 py-1.5 rounded-l-md text-slate-300 w-32 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 shadow-inner" />
+                    <button type="submit" className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider px-2 py-1.5 rounded-r-md text-[10px] border border-l-0 border-slate-700/50 transition-colors">Load</button>
+                </form>
             </div>
-            {userId && <div className="ml-2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></div>}
+            {userId && <div className="ml-2 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse shrink-0"></div>}
         </div>
       </header>
 
