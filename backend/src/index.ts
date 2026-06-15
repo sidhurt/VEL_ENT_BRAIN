@@ -7,7 +7,9 @@ import {
     decayMemories, 
     fetchMemoryCards, 
     updateProjectStatus, 
-    fetchGraphData 
+    fetchGraphData,
+    fetchEvolutionMetrics,
+    seedDemoPersonas
 } from './graphService';
 
 const app = express();
@@ -15,6 +17,11 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+
+// Health Check for Cloud Deployment
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Get Memory Cards for a User
 app.get('/api/cards/:userId', async (req, res) => {
@@ -31,6 +38,16 @@ app.get('/api/graph/:userId', async (req, res) => {
     try {
         const graph = await fetchGraphData(req.params.userId);
         res.json(graph);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Memory Evolution Metrics
+app.get('/api/evolution/:userId', async (req, res) => {
+    try {
+        const metrics = await fetchEvolutionMetrics(req.params.userId);
+        res.json(metrics);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -189,9 +206,22 @@ app.post('/api/enhance', async (req, res) => {
         // 4. Prepare Explainability Receipt & Context Pack
         const rawMemories = rankedContext.map(rc => rc.memory);
         
+        // Fetch User Name
+        const session = getSession();
+        let userName = userId;
+        try {
+            const userRes = await session.run(`MATCH (u:User {id: $userId}) RETURN coalesce(u.name, u.id) as name`, { userId });
+            if (userRes.records.length > 0) {
+                userName = userRes.records[0].get('name');
+            }
+        } finally {
+            await session.close();
+        }
+
         // Build the structural Context Pack according to the API Contract
         const contextPack = {
             identityContext: {
+                name: userName,
                 roles: rawMemories.filter(m => m.type === 'Role').map(m => m.content),
                 domains: rawMemories.filter(m => m.type === 'Domain').map(m => m.content)
             },
@@ -235,6 +265,15 @@ app.post('/api/simulate-time', async (req, res) => {
         if (!userId || !days) throw new Error("userId and days required");
         await decayMemories(userId, days);
         res.json({ success: true, message: `Simulated ${days} days passing. Memory states updated.` });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/onboard/demo-personas', async (req, res) => {
+    try {
+        await seedDemoPersonas();
+        res.json({ message: "Demo personas seeded successfully." });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
