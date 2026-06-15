@@ -402,67 +402,67 @@ export const seedDemoPersonas = async () => {
 
         const seedQuery = `
             // Create Enterprise
-            CREATE (org:Organization {id: 'org-velocity-media', name: 'Velocity Media'})
-            CREATE (team:Team {id: 'team-velocity-hq', name: 'Velocity HQ'})
-            CREATE (team)-[:BELONGS_TO]->(org)
+            MERGE (org:Organization {id: 'org-velocity-media'}) SET org.name = 'Velocity Media'
+            MERGE (team:Team {id: 'team-velocity-hq'}) SET team.name = 'Velocity HQ'
+            MERGE (team)-[:BELONGS_TO]->(org)
 
             // Create Enterprise Policies
-            CREATE (pol1:Policy {id: 'pol-prof', ruleText: 'Professional Communication Only'})
-            CREATE (pol2:Policy {id: 'pol-nospec', ruleText: 'No Speculation Presented As Fact'})
-            CREATE (pol3:Policy {id: 'pol-conf', ruleText: 'Client Confidentiality'})
-            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol1)
-            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol2)
-            CREATE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol3)
+            MERGE (pol1:Policy {id: 'pol-prof'}) SET pol1.ruleText = 'Professional Communication Only'
+            MERGE (pol2:Policy {id: 'pol-nospec'}) SET pol2.ruleText = 'No Speculation Presented As Fact'
+            MERGE (pol3:Policy {id: 'pol-conf'}) SET pol3.ruleText = 'Client Confidentiality'
+            MERGE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol1)
+            MERGE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol2)
+            MERGE (org)-[:ENFORCES {memoryState: 'Active', usageCount: 0}]->(pol3)
 
             // Emma
-            CREATE (u1:User {id: 'user-emma', role: 'Senior Content Strategy Manager', name: 'Emma Johnson'})
-            CREATE (u1)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
-            CREATE (r1:Role {id: 'role-emma', name: 'Senior Content Strategy Manager'})
-            CREATE (u1)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r1)
-            CREATE (p1:Project {id: 'proj-emma', name: 'Enterprise AI Adoption Program'})
-            CREATE (u1)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p1)
-            CREATE (s1:Style {id: 'style-emma', formattingRules: 'Casual Communication, Use Bullet Points'})
-            CREATE (u1)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s1)
-            CREATE (d1a:Domain {id: 'domain-emma-gov', name: 'Content Governance'})
-            CREATE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1a)
-            CREATE (d1b:Domain {id: 'domain-emma-marketing', name: 'Digital Marketing'})
-            CREATE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1b)
-            CREATE (t1:Task {id: 'task-emma-review', name: 'Content Review'})
-            CREATE (u1)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t1)
+            MERGE (u1:User {id: 'user-emma'}) SET u1.role = 'Senior Content Strategy Manager', u1.name = 'Emma Johnson'
+            MERGE (u1)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            MERGE (r1:Role {id: 'role-emma'}) SET r1.name = 'Senior Content Strategy Manager'
+            MERGE (u1)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r1)
+            MERGE (p1:Project {id: 'proj-emma'}) SET p1.name = 'Enterprise AI Adoption Program'
+            MERGE (u1)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p1)
+            MERGE (s1:Style {id: 'style-emma'}) SET s1.formattingRules = 'Casual Communication, Use Bullet Points'
+            MERGE (u1)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s1)
+            MERGE (d1a:Domain {id: 'domain-emma-gov'}) SET d1a.name = 'Content Governance'
+            MERGE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1a)
+            MERGE (d1b:Domain {id: 'domain-emma-marketing'}) SET d1b.name = 'Digital Marketing'
+            MERGE (u1)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d1b)
+            MERGE (t1:Task {id: 'task-emma-review'}) SET t1.name = 'Content Review'
+            MERGE (u1)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t1)
 
             // Siddharth
-            CREATE (u2:User {id: 'user-siddharth', role: 'Enterprise Architect', name: 'Siddharth S.'})
-            CREATE (u2)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
-            CREATE (r2:Role {id: 'role-siddharth', name: 'Enterprise Architect'})
-            CREATE (u2)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r2)
-            CREATE (p2a:Project {id: 'proj-siddharth-ub', name: 'Unified Brain Architecture'})
-            CREATE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2a)
-            CREATE (p2b:Project {id: 'proj-siddharth-dms', name: 'DMS Integration'})
-            CREATE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2b)
-            CREATE (d2a:Domain {id: 'domain-siddharth-aws', name: 'AWS'})
-            CREATE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2a)
-            CREATE (d2b:Domain {id: 'domain-siddharth-sap', name: 'SAP Integration'})
-            CREATE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2b)
-            CREATE (t2:Task {id: 'task-siddharth-arch', name: 'Architecture Review'})
-            CREATE (u2)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t2)
-            CREATE (s2:Style {id: 'style-siddharth', formattingRules: 'Direct, structured, technical depth'})
-            CREATE (u2)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s2)
+            MERGE (u2:User {id: 'user-siddharth'}) SET u2.role = 'Enterprise Architect', u2.name = 'Siddharth S.'
+            MERGE (u2)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            MERGE (r2:Role {id: 'role-siddharth'}) SET r2.name = 'Enterprise Architect'
+            MERGE (u2)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r2)
+            MERGE (p2a:Project {id: 'proj-siddharth-ub'}) SET p2a.name = 'Unified Brain Architecture'
+            MERGE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2a)
+            MERGE (p2b:Project {id: 'proj-siddharth-dms'}) SET p2b.name = 'DMS Integration'
+            MERGE (u2)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p2b)
+            MERGE (d2a:Domain {id: 'domain-siddharth-aws'}) SET d2a.name = 'AWS'
+            MERGE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2a)
+            MERGE (d2b:Domain {id: 'domain-siddharth-sap'}) SET d2b.name = 'SAP Integration'
+            MERGE (u2)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d2b)
+            MERGE (t2:Task {id: 'task-siddharth-arch'}) SET t2.name = 'Architecture Review'
+            MERGE (u2)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t2)
+            MERGE (s2:Style {id: 'style-siddharth'}) SET s2.formattingRules = 'Direct, structured, technical depth'
+            MERGE (u2)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s2)
 
             // Michael
-            CREATE (u3:User {id: 'user-michael', role: 'Client Success Director', name: 'Michael T.'})
-            CREATE (u3)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
-            CREATE (r3:Role {id: 'role-michael', name: 'Client Success Director'})
-            CREATE (u3)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r3)
-            CREATE (p3:Project {id: 'proj-michael', name: 'Revenue Intelligence Platform'})
-            CREATE (u3)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p3)
-            CREATE (d3a:Domain {id: 'domain-michael-research', name: 'Customer Research'})
-            CREATE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3a)
-            CREATE (d3b:Domain {id: 'domain-michael-sales', name: 'Enterprise Sales'})
-            CREATE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3b)
-            CREATE (t3:Task {id: 'task-michael-qbr', name: 'QBR Preparation'})
-            CREATE (u3)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t3)
-            CREATE (s3:Style {id: 'style-michael', formattingRules: 'Professional, empathetic, focus on ROI'})
-            CREATE (u3)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s3)
+            MERGE (u3:User {id: 'user-michael'}) SET u3.role = 'Client Success Director', u3.name = 'Michael T.'
+            MERGE (u3)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0}]->(team)
+            MERGE (r3:Role {id: 'role-michael'}) SET r3.name = 'Client Success Director'
+            MERGE (u3)-[:HAS_ROLE {memoryState: 'Active', usageCount: 0}]->(r3)
+            MERGE (p3:Project {id: 'proj-michael'}) SET p3.name = 'Revenue Intelligence Platform'
+            MERGE (u3)-[:WORKS_ON {memoryState: 'Active', usageCount: 0}]->(p3)
+            MERGE (d3a:Domain {id: 'domain-michael-research'}) SET d3a.name = 'Customer Research'
+            MERGE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3a)
+            MERGE (d3b:Domain {id: 'domain-michael-sales'}) SET d3b.name = 'Enterprise Sales'
+            MERGE (u3)-[:EXPERT_IN {memoryState: 'Active', usageCount: 0}]->(d3b)
+            MERGE (t3:Task {id: 'task-michael-qbr'}) SET t3.name = 'QBR Preparation'
+            MERGE (u3)-[:PERFORMS {memoryState: 'Active', usageCount: 0}]->(t3)
+            MERGE (s3:Style {id: 'style-michael'}) SET s3.formattingRules = 'Professional, empathetic, focus on ROI'
+            MERGE (u3)-[:HAS_STYLE {memoryState: 'Active', usageCount: 0}]->(s3)
         `;
         await session.run(seedQuery);
     } finally {

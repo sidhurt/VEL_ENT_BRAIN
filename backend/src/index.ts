@@ -177,6 +177,18 @@ app.post('/api/onboard/enterprise', async (req, res) => {
     }
 });
 
+app.delete('/api/admin/clear', async (req, res) => {
+    const session = getSession();
+    try {
+        await session.run(`MATCH (n) DETACH DELETE n`);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
+    }
+});
+
 // Update Project Status manually (optional, legacy)
 app.patch('/api/project/:projectId/status', async (req, res) => {
     try {
