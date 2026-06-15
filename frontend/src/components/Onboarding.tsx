@@ -20,8 +20,14 @@ const TextArea = (props: any) => (
 );
 
 export default function Onboarding({ apiUrl, onComplete, onUserChange }: { apiUrl: string, onComplete: () => void, onUserChange: (userId: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'personal' | 'enterprise'>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'enterprise' | 'attach'>('personal');
   const [loading, setLoading] = useState(false);
+
+  // Attach Form State & Data
+  const [usersList, setUsersList] = useState<{id: string, name: string}[]>([]);
+  const [enterpriseList, setEnterpriseList] = useState<{id: string, name: string}[]>([]);
+  const [attachUserId, setAttachUserId] = useState('');
+  const [attachOrgId, setAttachOrgId] = useState('');
 
   // Personal Form State
   const [pUserId, setPUserId] = useState('');
@@ -37,6 +43,22 @@ export default function Onboarding({ apiUrl, onComplete, onUserChange }: { apiUr
   const [eOrgName, setEOrgName] = useState('');
   const [ePolicies, setEPolicies] = useState('');
   const [eProjects, setEProjects] = useState('');
+
+  // Fetch lists when attach tab is clicked
+  const fetchAttachLists = async () => {
+      try {
+          const [uRes, eRes] = await Promise.all([
+              axios.get(`${apiUrl}/users`),
+              axios.get(`${apiUrl}/enterprises`)
+          ]);
+          setUsersList(uRes.data);
+          setEnterpriseList(eRes.data);
+          if (uRes.data.length > 0 && !attachUserId) setAttachUserId(uRes.data[0].id);
+          if (eRes.data.length > 0 && !attachOrgId) setAttachOrgId(eRes.data[0].id);
+      } catch (err) {
+          console.error("Failed to fetch lists", err);
+      }
+  };
 
   const handlePersonalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +111,25 @@ export default function Onboarding({ apiUrl, onComplete, onUserChange }: { apiUr
     }
   };
 
+  const handleAttachSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!attachUserId || !attachOrgId) return;
+    setLoading(true);
+    try {
+        await axios.post(`${apiUrl}/enterprise/attach-user`, {
+            userId: attachUserId,
+            orgId: attachOrgId
+        });
+        onUserChange(attachUserId); // Refresh the graph
+        onComplete();
+        alert("User successfully attached to Enterprise!");
+    } catch (err) {
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   return (
     <div className="glass-panel rounded-2xl overflow-hidden shadow-2xl relative">
       
@@ -97,10 +138,13 @@ export default function Onboarding({ apiUrl, onComplete, onUserChange }: { apiUr
         <div className="flex bg-slate-950/50 rounded-lg p-1 border border-slate-800/50">
             <button 
                 className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === 'personal' ? 'bg-slate-800 text-indigo-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
-                onClick={() => setActiveTab('personal')}>Personal Brain</button>
+                onClick={() => setActiveTab('personal')}>Personal</button>
             <button 
                 className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === 'enterprise' ? 'bg-slate-800 text-fuchsia-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
-                onClick={() => setActiveTab('enterprise')}>Enterprise Brain</button>
+                onClick={() => setActiveTab('enterprise')}>Enterprise</button>
+            <button 
+                className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === 'attach' ? 'bg-slate-800 text-emerald-400 shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                onClick={() => { setActiveTab('attach'); fetchAttachLists(); }}>Attach</button>
         </div>
       </div>
 
@@ -165,6 +209,36 @@ export default function Onboarding({ apiUrl, onComplete, onUserChange }: { apiUr
             </div>
             <button type="submit" disabled={loading} className="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold uppercase tracking-widest text-xs py-3 px-4 rounded-xl disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,38,211,0.4)] hover:shadow-[0_0_25px_rgba(192,38,211,0.6)] mt-2">
                 {loading ? 'Deploying...' : 'Establish Enterprise Node'}
+            </button>
+          </form>
+        )}
+
+        {activeTab === 'attach' && (
+          <form onSubmit={handleAttachSubmit} className="space-y-4">
+             <div>
+                <InputLabel>Select User</InputLabel>
+                <select 
+                    value={attachUserId} 
+                    onChange={(e) => setAttachUserId(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
+                >
+                    {usersList.length === 0 && <option value="">No users found</option>}
+                    {usersList.map(u => <option key={u.id} value={u.id}>{u.name} ({u.id})</option>)}
+                </select>
+             </div>
+             <div>
+                <InputLabel>Select Enterprise Organization</InputLabel>
+                <select 
+                    value={attachOrgId} 
+                    onChange={(e) => setAttachOrgId(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
+                >
+                    {enterpriseList.length === 0 && <option value="">No enterprises found</option>}
+                    {enterpriseList.map(e => <option key={e.id} value={e.id}>{e.name} ({e.id})</option>)}
+                </select>
+             </div>
+             <button type="submit" disabled={loading || !attachUserId || !attachOrgId} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-widest text-xs py-3 px-4 rounded-xl disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] mt-2">
+                {loading ? 'Attaching...' : 'Link to Enterprise'}
             </button>
           </form>
         )}

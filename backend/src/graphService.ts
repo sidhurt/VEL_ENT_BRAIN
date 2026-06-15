@@ -470,3 +470,41 @@ export const seedDemoPersonas = async () => {
     }
 }
 
+export const fetchUsers = async () => {
+    const session = getSession();
+    try {
+        const query = `MATCH (u:User) RETURN u.id as id, u.name as name`;
+        const result = await session.run(query);
+        return result.records.map(r => ({ id: r.get('id'), name: r.get('name') }));
+    } finally {
+        await session.close();
+    }
+};
+
+export const fetchEnterprises = async () => {
+    const session = getSession();
+    try {
+        const query = `MATCH (o:Organization) RETURN o.id as id, o.name as name`;
+        const result = await session.run(query);
+        return result.records.map(r => ({ id: r.get('id'), name: r.get('name') }));
+    } finally {
+        await session.close();
+    }
+};
+
+export const attachUserToEnterprise = async (userId: string, orgId: string) => {
+    const session = getSession();
+    try {
+        const query = `
+            MATCH (o:Organization {id: $orgId})
+            MATCH (t:Team {id: 'team-default-' + $orgId})
+            MATCH (u:User {id: $userId})
+            MERGE (u)-[:MEMBER_OF {memoryState: 'Active', usageCount: 0, lastUsed: timestamp()}]->(t)
+        `;
+        await session.run(query, { userId, orgId });
+    } finally {
+        await session.close();
+    }
+};
+
+

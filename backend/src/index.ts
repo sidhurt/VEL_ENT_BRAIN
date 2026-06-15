@@ -9,7 +9,10 @@ import {
     updateProjectStatus, 
     fetchGraphData,
     fetchEvolutionMetrics,
-    seedDemoPersonas
+    seedDemoPersonas,
+    fetchUsers,
+    fetchEnterprises,
+    attachUserToEnterprise
 } from './graphService';
 
 const app = express();
@@ -277,6 +280,35 @@ app.post('/api/simulate-time', async (req, res) => {
         if (!userId || !days) throw new Error("userId and days required");
         await decayMemories(userId, days);
         res.json({ success: true, message: `Simulated ${days} days passing. Memory states updated.` });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await fetchUsers();
+        res.json(users);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/enterprises', async (req, res) => {
+    try {
+        const enterprises = await fetchEnterprises();
+        res.json(enterprises);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/enterprise/attach-user', async (req, res) => {
+    try {
+        const { userId, orgId } = req.body;
+        if (!userId || !orgId) throw new Error("userId and orgId required");
+        await attachUserToEnterprise(userId, orgId);
+        res.json({ success: true, message: "User attached to Enterprise" });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
