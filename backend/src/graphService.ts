@@ -386,7 +386,16 @@ export const seedDemoPersonas = async () => {
     try {
         const clearQuery = `
             // Clear existing demo nodes
-            MATCH (n) WHERE n.id IN ['org-velocity-media', 'team-velocity-hq', 'pol-prof', 'pol-nospec', 'pol-conf', 'user-emma', 'user-siddharth', 'user-michael', 'role-emma', 'role-siddharth', 'role-michael', 'proj-emma', 'proj-siddharth', 'proj-michael', 'style-emma', 'domain-siddharth-aws', 'domain-siddharth-sap', 'domain-michael']
+            MATCH (n) WHERE n.id IN [
+                'org-velocity-media', 'team-velocity-hq', 'pol-prof', 'pol-nospec', 'pol-conf', 
+                'user-emma', 'user-siddharth', 'user-michael', 
+                'role-emma', 'role-siddharth', 'role-michael', 
+                'proj-emma', 'proj-siddharth', 'proj-siddharth-ub', 'proj-siddharth-dms', 'proj-michael', 
+                'style-emma', 'style-siddharth', 'style-michael',
+                'domain-emma-gov', 'domain-emma-marketing', 'task-emma-review',
+                'domain-siddharth-aws', 'domain-siddharth-sap', 'task-siddharth-arch', 
+                'domain-michael', 'domain-michael-research', 'domain-michael-sales', 'task-michael-qbr'
+            ]
             DETACH DELETE n
         `;
         await session.run(clearQuery);
