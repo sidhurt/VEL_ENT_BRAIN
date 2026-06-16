@@ -10,6 +10,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
   const [result, setResult] = useState<any>(null);
   const [guardrails, setGuardrails] = useState<{policy: string, reason: string, action: string, redactedPrompt?: string}[]>([]);
   const [orgData, setOrgData] = useState<{orgName: string, policies: string[]} | null>(null);
+  const [disambiguationResolved, setDisambiguationResolved] = useState(false);
 
   // Fetch Org data to display inheritance
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
         setResult(null);
         setGuardrails([]);
         setPrompt('');
+        setDisambiguationResolved(false);
     }
   }, [userId, apiUrl]);
 
@@ -30,6 +32,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
     setLoading(true);
     setGuardrails([]);
     setResult(null);
+    setDisambiguationResolved(false);
 
     let finalPrompt = prompt;
     let localGuardrails: {policy: string, reason: string, action: string, redactedPrompt?: string}[] = [];
@@ -132,7 +135,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
   const lowConfidenceItems = result?.explainabilityReceipt?.filter((i:any) => 
       (i.type === 'Project' || i.type === 'Task') && i.confidence === 'Low'
   ) || [];
-  const requiresDisambiguation = lowConfidenceItems.length > 0;
+  const requiresDisambiguation = !disambiguationResolved && lowConfidenceItems.length > 0;
 
   return (
     <div className="flex flex-col h-full bg-slate-900/40 relative">
@@ -352,8 +355,8 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                                 Based on your prompt, we are not fully confident which project you are referring to. Are you asking about <strong>{lowConfidenceItems[0]?.name}</strong>?
                             </p>
                             <div className="flex gap-3">
-                                <button className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold transition-all">Yes, use this project</button>
-                                <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">No, let me specify</button>
+                                <button onClick={() => setDisambiguationResolved(true)} className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold transition-all">Yes, use this project</button>
+                                <button onClick={() => setResult(null)} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">No, let me specify</button>
                             </div>
                          </div>
                     )}
