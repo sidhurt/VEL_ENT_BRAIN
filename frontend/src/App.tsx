@@ -109,7 +109,7 @@ function App() {
           {/* Top Half: Governance Profile Ledger */}
           <div className="h-[45%] glass-panel rounded-2xl overflow-hidden flex flex-col shadow-2xl relative">
               <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
-              <GovernanceProfile graphData={graphData} />
+              <GovernanceProfile graphData={graphData} apiUrl={API_URL} />
           </div>
 
           {/* Bottom Half: Graph Vis */}

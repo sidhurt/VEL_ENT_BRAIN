@@ -349,12 +349,13 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                                 Clarification Required
                             </h3>
                             <p className="text-sm text-slate-300 mb-4">
-                                Based on your prompt, we are not fully confident which project you are referring to. Are you asking about <strong>{lowConfidenceItems[0].name}</strong>?
+                                Based on your prompt, we are not fully confident which project you are referring to. Are you asking about <strong>{lowConfidenceItems[0]?.name}</strong>?
                             </p>
                             <div className="flex gap-3">
                                 <button className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold transition-all">Yes, use this project</button>
                                 <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">No, let me specify</button>
                             </div>
+                         </div>
                     )}
                     {result && !requiresDisambiguation && (
                     <div className="bg-[#0d1117] rounded-xl p-4 shadow-xl border border-slate-800 mt-6 group">
