@@ -12,6 +12,7 @@ import {
     seedDemoPersonas,
     fetchUsers,
     fetchEnterprises,
+    fetchEnterpriseDetails,
     attachUserToEnterprise
 } from './graphService';
 
@@ -298,6 +299,15 @@ app.get('/api/enterprises', async (req, res) => {
     try {
         const enterprises = await fetchEnterprises();
         res.json(enterprises);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/enterprise/:orgId/details', async (req, res) => {
+    try {
+        const details = await fetchEnterpriseDetails(req.params.orgId);
+        res.json(details);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

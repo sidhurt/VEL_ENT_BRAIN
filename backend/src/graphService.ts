@@ -57,12 +57,22 @@ export const fetchAllMemories = async (userId: string): Promise<MemoryItem[]> =>
 export const rankAndSelectContext = (memories: MemoryItem[], prompt: string) => {
     const promptLower = prompt.toLowerCase();
     
-    // Deduplicate memories by ID before scoring to prevent edge collision issues
+    // Deduplicate memories by content/name before scoring to prevent Personal vs Enterprise collision
     const uniqueMemoriesMap = new Map<string, MemoryItem>();
     memories.forEach(mem => {
-        // If it exists, we could merge edge counts, but for MVP just taking the first one is enough
-        if (!uniqueMemoriesMap.has(mem.id)) {
-            uniqueMemoriesMap.set(mem.id, mem);
+        let dedupeKey = mem.id;
+        if (mem.type === 'Project' || mem.type === 'Task') {
+            dedupeKey = `${mem.type}_${mem.content.toLowerCase().trim()}`;
+        }
+        
+        if (!uniqueMemoriesMap.has(dedupeKey)) {
+            uniqueMemoriesMap.set(dedupeKey, mem);
+        } else {
+            // Favor Enterprise projects if collision occurs (e.g. ID contains 'ent')
+            const existing = uniqueMemoriesMap.get(dedupeKey)!;
+            if (mem.id.includes('ent-') && !existing.id.includes('ent-')) {
+                uniqueMemoriesMap.set(dedupeKey, mem);
+            }
         }
     });
     const deduplicatedMemories = Array.from(uniqueMemoriesMap.values());
@@ -133,11 +143,18 @@ export const rankAndSelectContext = (memories: MemoryItem[], prompt: string) => 
             totalScore += 100; // Base identity anchor
         }
 
+        let confidence = totalScore > 100 ? 'High' : (totalScore > 50 ? 'Medium' : 'Low');
+        
+        // Low Confidence Rejection: If this is a Project/Task and has no semantic intent, force confidence to Low
+        if ((mem.type === 'Project' || mem.type === 'Task') && intentScore === 0) {
+            confidence = 'Low';
+        }
+
         return {
             memory: mem,
             score: totalScore,
             reasons,
-            confidence: totalScore > 100 ? 'High' : (totalScore > 50 ? 'Medium' : 'Low')
+            confidence
         };
     });
 
@@ -487,6 +504,31 @@ export const fetchEnterprises = async () => {
         const query = `MATCH (o:Organization) RETURN o.id as id, o.name as name`;
         const result = await session.run(query);
         return result.records.map(r => ({ id: r.get('id'), name: r.get('name') }));
+    } finally {
+        await session.close();
+    }
+};
+
+export const fetchEnterpriseDetails = async (orgId: string) => {
+    const session = getSession();
+    try {
+        const query = `
+            MATCH (o:Organization {id: $orgId})
+            OPTIONAL MATCH (o)-[:ENFORCES]->(p:Policy)
+            OPTIONAL MATCH (o)-[:OWNS]->(proj:Project)
+            OPTIONAL MATCH (u:User)-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(o)
+            RETURN o, collect(DISTINCT p) as policies, collect(DISTINCT proj) as projects, collect(DISTINCT u) as members
+        `;
+        const result = await session.run(query, { orgId });
+        if (result.records.length === 0) throw new Error("Org not found");
+        const r = result.records[0];
+        
+        return {
+            organization: r.get('o').properties,
+            policies: r.get('policies').map((x:any) => x.properties),
+            projects: r.get('projects').map((x:any) => x.properties),
+            members: r.get('members').map((x:any) => x.properties)
+        };
     } finally {
         await session.close();
     }

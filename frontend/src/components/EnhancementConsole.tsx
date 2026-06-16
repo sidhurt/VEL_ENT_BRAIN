@@ -34,8 +34,9 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
     let finalPrompt = prompt;
     let localGuardrails: {policy: string, reason: string, action: string, redactedPrompt?: string}[] = [];
 
+    let isHardStopped = false;
     // FRONTEND-ONLY MOCK: Simulating Velocity Prompt Engine Guardrails & Policy Triggers
-    const openAiKeyRegex = /sk-[A-Za-z0-9_-]+/g;
+    const openAiKeyRegex = /(sk-|sp-|sk-proj-|sp-proj-)[A-Za-z0-9_-]+/g;
     
     if (/secret document|confidential|internal customer data/i.test(finalPrompt)) {
         finalPrompt = finalPrompt.replace(/secret document[s]?|confidential|internal customer data/gi, '[REDACTED_CONFIDENTIAL_INFO]');
@@ -72,12 +73,19 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
       localGuardrails.push({
         policy: 'Data Loss Prevention (DLP)',
         reason: 'Sensitive Content Removed: API Key detected.',
-        action: 'API Key redacted from payload.',
+        action: 'HARD STOP: Payload interception. Action blocked.',
         redactedPrompt: finalPrompt
       });
+      isHardStopped = true;
     }
     
     setGuardrails(localGuardrails);
+
+    if (isHardStopped) {
+        setResult(null);
+        setLoading(false);
+        return;
+    }
 
     try {
       const res = await axios.post(`${apiUrl}/enhance`, { userId, prompt: finalPrompt });
@@ -95,9 +103,9 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
     text += `You are an AI assistant. Use the following context to respond to the user.\n\n`;
     
     if (result.contextPack.policyContext?.length > 0) {
-      text += `[ENTERPRISE POLICIES]\n`;
+      text += `<CRITICAL_POLICIES>\n`;
       result.contextPack.policyContext.forEach((p: any) => text += `- ${p.ruleText}\n`);
-      text += `\n`;
+      text += `</CRITICAL_POLICIES>\n\n`;
     }
 
     if (result.contextPack.identityContext?.name || result.contextPack.identityContext?.roles?.length > 0 || result.contextPack.projectContext?.length > 0) {
@@ -120,6 +128,11 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
   const hasCasualStyle = result?.contextPack?.styleContext?.some((s:string) => s.toLowerCase().includes('casual'));
   const hasProfPolicy = result?.contextPack?.policyContext?.some((p:any) => p.ruleText.toLowerCase().includes('professional'));
   const conflictDetected = hasCasualStyle && hasProfPolicy;
+
+  const lowConfidenceItems = result?.explainabilityReceipt?.filter((i:any) => 
+      (i.type === 'Project' || i.type === 'Task') && i.confidence === 'Low'
+  ) || [];
+  const requiresDisambiguation = lowConfidenceItems.length > 0;
 
   return (
     <div className="flex flex-col h-full bg-slate-900/40 relative">
@@ -147,7 +160,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
       
       <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-6 custom-scrollbar relative z-0">
 
-        {!result && (
+        {!result && guardrails.length === 0 && (
              <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-60">
                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-slate-600"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                  <p className="text-sm font-medium">Ready to Assemble Context</p>
@@ -156,7 +169,7 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
         )}
 
         {/* Output area */}
-        {result && (
+        {(result || guardrails.length > 0) && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
              
              {/* Guardrail Card (Only in Demo Mode if triggered) */}
@@ -228,10 +241,11 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                  </div>
              )}
 
-             {mode === 'demonstration' ? (
+              {mode === 'demonstration' ? (
                 /* Enterprise Governance Dominant UI */
                 <div className="space-y-6">
                     {/* 1. Inheritance Hierarchy */}
+                    {result && (
                     <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-5 shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
@@ -286,8 +300,10 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* 2. Employee Context (Explainability Receipt Redesign) */}
+                    {result && (
                     <div>
                         <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2 ml-1">
                             <svg className="text-sky-400" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
@@ -323,8 +339,24 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                             )})}
                         </div>
                     </div>
+                    )}
 
                     {/* 3. LLM Payload Preview */}
+                    {result && requiresDisambiguation && (
+                         <div className="bg-rose-950/30 border border-rose-500/30 rounded-xl p-4 shadow-xl mt-6">
+                            <h3 className="text-xs font-bold text-rose-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                Clarification Required
+                            </h3>
+                            <p className="text-sm text-slate-300 mb-4">
+                                Based on your prompt, we are not fully confident which project you are referring to. Are you asking about <strong>{lowConfidenceItems[0].name}</strong>?
+                            </p>
+                            <div className="flex gap-3">
+                                <button className="bg-emerald-600/80 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold transition-all">Yes, use this project</button>
+                                <button className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded text-xs font-bold transition-all">No, let me specify</button>
+                            </div>
+                    )}
+                    {result && !requiresDisambiguation && (
                     <div className="bg-[#0d1117] rounded-xl p-4 shadow-xl border border-slate-800 mt-6 group">
                         <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                             <div className="flex items-center gap-2">
@@ -338,9 +370,11 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                             </pre>
                         </div>
                     </div>
+                    )}
                 </div>
              ) : (
                 /* Production Context Pack (JSON) */
+                result ? (
                 <div className="bg-[#0d1117] rounded-xl p-4 shadow-2xl border border-slate-800 h-full relative">
                   <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
                       <div className="flex items-center gap-2">
@@ -358,6 +392,11 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                       </pre>
                   </div>
                 </div>
+                ) : (
+                    <div className="bg-[#0d1117] rounded-xl p-4 shadow-2xl border border-slate-800 h-full relative flex items-center justify-center text-slate-500 text-sm">
+                        Action blocked by Enterprise Governance. Payload not generated.
+                    </div>
+                )
              )}
           </div>
         )}
