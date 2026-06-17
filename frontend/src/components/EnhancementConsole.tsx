@@ -188,55 +188,79 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
               {viewMode === 'demonstration' && result ? (
                 <div className="space-y-8">
                     
-                    {/* SECTION 1: CONTEXT PACK */}
+                    {/* SECTION 1: GENERATED ARTIFACT */}
                     <div className="space-y-4">
-                        <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-                            Section 1: Context Pack
+                        <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span className="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                Section 1: Generated Artifact
+                            </span>
+                            {result.executionMetadata && (
+                                <span className="flex items-center gap-2 text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
+                                    <span className="text-fuchsia-400">Profile: {result.outcomeProfile || 'Generic'}</span>
+                                    <span>|</span>
+                                    <span>{result.executionMetadata.provider} | {result.executionMetadata.executionTime}ms</span>
+                                </span>
+                            )}
                         </h3>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4">
-                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Identity & Roles</span>
-                                <div className="text-sm text-slate-200 font-semibold">{result.contextPack.identityContext?.name}</div>
-                                {result.contextPack.identityContext?.roles?.map((r: string, i: number) => (
-                                    <div key={i} className="text-xs text-amber-400 mt-1">{r}</div>
-                                ))}
-                            </div>
-                            
-                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4">
-                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Active Projects & Tasks</span>
-                                {result.contextPack.projectContext?.map((p: any, i: number) => (
-                                    <div key={i} className="text-xs text-fuchsia-400 mb-1 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg> {p.name}</div>
-                                ))}
-                                {result.contextPack.taskContext?.map((t: any, i: number) => (
-                                    <div key={i} className="text-xs text-slate-400 mb-1 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg> {t.name}</div>
-                                ))}
-                                {(!result.contextPack.projectContext?.length && !result.contextPack.taskContext?.length) && <span className="text-xs text-slate-600">None detected</span>}
-                            </div>
-
-                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 col-span-2">
-                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Mandatory Enterprise Policies</span>
-                                <div className="space-y-2">
-                                    {result.contextPack.policyContext?.map((p:any, i:number) => (
-                                        <div key={i} className="flex items-center gap-2 bg-slate-950/50 border border-emerald-900/30 px-3 py-1.5 rounded-md">
-                                            <svg className="text-emerald-500 shrink-0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            <span className="text-xs text-slate-300 font-medium">{p.ruleText}</span>
-                                        </div>
-                                    ))}
-                                    {(!result.contextPack.policyContext || result.contextPack.policyContext.length === 0) && (
-                                        <span className="text-xs text-slate-500 italic">No mandatory policies applied.</span>
-                                    )}
+                        {result.generatedOutcome ? (
+                            <div className="bg-slate-50 rounded-xl p-6 shadow-xl border border-slate-200 text-slate-900 font-serif leading-relaxed text-sm">
+                                <div className="text-[10px] uppercase font-sans font-bold text-slate-400 tracking-widest mb-4 pb-2 border-b border-slate-200">
+                                    Outcome Generated Using Unified Brain Context
                                 </div>
+                                <div className="whitespace-pre-wrap">
+                                    {result.generatedOutcome}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-slate-900/40 rounded-xl p-8 border border-slate-800 border-dashed flex flex-col items-center justify-center text-slate-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                <span className="text-xs">Context Assembled. Execute to generate outcome.</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* SECTION 2: OUTCOME PROVENANCE */}
+                    <div className="space-y-4">
+                        <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                            Section 2: Outcome Provenance
+                        </h3>
+                        <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4">
+                            <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-3 flex justify-between">
+                                <span>Context Sources Applied</span>
+                                <span>{result.explainabilityReceipt?.length || 0} Entities</span>
+                            </span>
+                            <div className="grid grid-cols-2 gap-4">
+                                {(()=>{
+                                    const totalWeight = result.explainabilityReceipt?.reduce((acc: number, item: any) => acc + (item.weight || 0), 0) || 0;
+                                    const provenanceItems = result.explainabilityReceipt?.map((item: any) => ({
+                                        ...item,
+                                        percentage: totalWeight > 0 ? Math.max(1, Math.round((item.weight / totalWeight) * 100)) : 0
+                                    })).sort((a: any, b: any) => b.percentage - a.percentage) || [];
+
+                                    return provenanceItems.slice(0, 8).map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+                                            <div>
+                                                <span className="block text-[9px] uppercase tracking-widest text-slate-500 mb-0.5">{item.type}</span>
+                                                <span className="text-xs font-bold text-slate-300 truncate max-w-[200px] block">{item.name}</span>
+                                            </div>
+                                            <div className="text-xs font-bold text-amber-400">
+                                                {item.type === 'Policy' ? 'MANDATORY' : `${item.percentage}%`}
+                                            </div>
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         </div>
                     </div>
 
-                    {/* SECTION 2: PIPELINE TRACE */}
+                    {/* SECTION 3: PIPELINE TRACE */}
                     <div className="space-y-4">
                         <h3 className="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                            Section 2: Pipeline Trace
+                            Section 3: Pipeline Trace
                         </h3>
                         
                         {/* Conflict Resolution Visual */}
@@ -309,36 +333,49 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
                              </div>
                         )}
                     </div>
-
-                    {/* SECTION 3: GENERATED OUTCOME */}
+                    
+                    {/* SECTION 4: CONTEXT PACK */}
                     <div className="space-y-4">
-                        <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center justify-between border-b border-slate-800 pb-2">
-                            <span className="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                                Section 3: Generated Outcome
-                            </span>
-                            {result.executionMetadata && (
-                                <span className="text-[9px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
-                                    {result.executionMetadata.provider} | {result.executionMetadata.executionTime}ms
-                                </span>
-                            )}
+                        <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                            Section 4: Context Pack
                         </h3>
                         
-                        {result.generatedOutcome ? (
-                            <div className="bg-slate-50 rounded-xl p-6 shadow-xl border border-slate-200 text-slate-900 font-serif leading-relaxed text-sm">
-                                <div className="text-[10px] uppercase font-sans font-bold text-slate-400 tracking-widest mb-4 pb-2 border-b border-slate-200">
-                                    Outcome Generated Using Unified Brain Context
-                                </div>
-                                <div className="whitespace-pre-wrap">
-                                    {result.generatedOutcome}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4">
+                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Identity & Roles</span>
+                                <div className="text-sm text-slate-200 font-semibold">{result.contextPack.identityContext?.name}</div>
+                                {result.contextPack.identityContext?.roles?.map((r: string, i: number) => (
+                                    <div key={i} className="text-xs text-amber-400 mt-1">{r}</div>
+                                ))}
+                            </div>
+                            
+                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4">
+                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Active Projects & Tasks</span>
+                                {result.contextPack.projectContext?.map((p: any, i: number) => (
+                                    <div key={i} className="text-xs text-fuchsia-400 mb-1 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/></svg> {p.name}</div>
+                                ))}
+                                {result.contextPack.taskContext?.map((t: any, i: number) => (
+                                    <div key={i} className="text-xs text-slate-400 mb-1 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg> {t.name}</div>
+                                ))}
+                                {(!result.contextPack.projectContext?.length && !result.contextPack.taskContext?.length) && <span className="text-xs text-slate-600">None detected</span>}
+                            </div>
+
+                            <div className="bg-slate-900 border border-slate-700/50 rounded-xl p-4 col-span-2">
+                                <span className="block text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2">Mandatory Enterprise Policies</span>
+                                <div className="space-y-2">
+                                    {result.contextPack.policyContext?.map((p:any, i:number) => (
+                                        <div key={i} className="flex items-center gap-2 bg-slate-950/50 border border-emerald-900/30 px-3 py-1.5 rounded-md">
+                                            <svg className="text-emerald-500 shrink-0" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            <span className="text-xs text-slate-300 font-medium">{p.ruleText}</span>
+                                        </div>
+                                    ))}
+                                    {(!result.contextPack.policyContext || result.contextPack.policyContext.length === 0) && (
+                                        <span className="text-xs text-slate-500 italic">No mandatory policies applied.</span>
+                                    )}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="bg-slate-900/40 rounded-xl p-8 border border-slate-800 border-dashed flex flex-col items-center justify-center text-slate-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mb-2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                                <span className="text-xs">Context Assembled. Execute to generate outcome.</span>
-                            </div>
-                        )}
+                        </div>
                     </div>
 
                 </div>

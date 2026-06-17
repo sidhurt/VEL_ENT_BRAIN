@@ -13,7 +13,11 @@ import {
     fetchUsers,
     fetchEnterprises,
     fetchEnterpriseDetails,
-    attachUserToEnterprise
+    attachUserToEnterprise,
+    upsertCandidateEntity,
+    fetchCandidates,
+    promoteCandidateToMemory,
+    ignoreCandidate
 } from './graphService';
 import { llmService } from './llmService';
 
@@ -53,6 +57,36 @@ app.get('/api/evolution/:userId', async (req, res) => {
     try {
         const metrics = await fetchEvolutionMetrics(req.params.userId);
         res.json(metrics);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Candidate Memories
+app.get('/api/evolution/:userId/candidates', async (req, res) => {
+    try {
+        const candidates = await fetchCandidates(req.params.userId);
+        res.json(candidates);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Promote Candidate to Memory
+app.post('/api/evolution/:userId/candidates/:candidateId/promote', async (req, res) => {
+    try {
+        await promoteCandidateToMemory(req.params.userId, req.params.candidateId);
+        res.json({ success: true, message: 'Candidate promoted' });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Ignore Candidate
+app.delete('/api/evolution/:userId/candidates/:candidateId/ignore', async (req, res) => {
+    try {
+        await ignoreCandidate(req.params.userId, req.params.candidateId);
+        res.json({ success: true, message: 'Candidate ignored' });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -261,12 +295,14 @@ app.post('/api/enhance', async (req, res) => {
             type: rc.memory.type,
             name: rc.memory.content,
             reasons: rc.reasons,
-            confidence: rc.confidence
+            confidence: rc.confidence,
+            weight: rc.score // passing the raw score to calculate % on frontend
         }));
 
         let responsePayload: any = {
             contextPack,
-            explainabilityReceipt
+            explainabilityReceipt,
+            outcomeProfile: 'Generic' // fallback for now
         };
 
         if (executionMode === 'execute') {
@@ -276,6 +312,23 @@ app.post('/api/enhance', async (req, res) => {
         }
 
         res.json(responsePayload);
+
+        // --- ASYNCHRONOUS CANDIDATE EXTRACTION ---
+        // Do not await this. It runs in the background.
+        llmService.extractCandidateEntities(prompt).then(async (candidates) => {
+            for (const cand of candidates) {
+                // Ignore if it's already in the top selected context to prevent redundant candidates
+                const alreadyExists = rankedContext.some(rc => 
+                    rc.memory.type === cand.type && 
+                    rc.memory.content.toLowerCase().includes(cand.name.toLowerCase())
+                );
+                if (!alreadyExists) {
+                    await upsertCandidateEntity(userId, cand.type, cand.name, cand.confidence);
+                }
+            }
+        }).catch(err => {
+            console.error("Async candidate extraction failed:", err);
+        });
 
     } catch (err: any) {
         res.status(500).json({ error: err.message });

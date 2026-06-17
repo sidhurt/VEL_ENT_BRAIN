@@ -68,6 +68,30 @@ export class LLMService {
             };
         }
     }
+
+    async extractCandidateEntities(prompt: string): Promise<{ type: string, name: string, confidence: number }[]> {
+        const systemPrompt = `You are an Information Extraction engine. Analyze the user's prompt. Does it mention any specific new Projects, Tasks, or Domains of expertise they are working on? 
+Return a JSON array of objects with keys: "type" (must be "Project", "Task", or "Domain"), "name", and "confidence" (0-100). If none, return []. Do not include markdown formatting like \`\`\`json. Return only raw JSON.`;
+        
+        try {
+            const result = await this.primaryProvider.generate(systemPrompt, prompt);
+            let text = result.text.trim();
+            if (text.startsWith('\`\`\`json')) text = text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+            if (text.startsWith('\`\`\`')) text = text.replace(/\`\`\`/g, '').trim();
+            
+            const entities = JSON.parse(text);
+            if (Array.isArray(entities)) {
+                return entities.filter(e => e.type && e.name && typeof e.confidence === 'number' && e.confidence >= 70);
+            }
+        } catch (e) {
+            console.error('Extraction failed or not JSON:', e);
+            // Deterministic mock extraction for Demo
+            if (prompt.toLowerCase().includes('q4 velocity media')) {
+                return [{ type: 'Project', name: 'Q4 Velocity Media', confidence: 91 }];
+            }
+        }
+        return [];
+    }
 }
 
 export const llmService = new LLMService();

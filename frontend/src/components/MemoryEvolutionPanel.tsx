@@ -3,6 +3,7 @@ import axios from 'axios';
 
 export default function MemoryEvolutionPanel({ userId, apiUrl }: { userId: string, apiUrl: string }) {
   const [data, setData] = useState<any>(null);
+  const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEvolution = async () => {
@@ -11,11 +12,27 @@ export default function MemoryEvolutionPanel({ userId, apiUrl }: { userId: strin
     try {
       const res = await axios.get(`${apiUrl}/evolution/${userId}`);
       setData(res.data);
+      const candRes = await axios.get(`${apiUrl}/evolution/${userId}/candidates`);
+      setCandidates(candRes.data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePromote = async (candId: string) => {
+    try {
+      await axios.post(`${apiUrl}/evolution/${userId}/candidates/${candId}/promote`);
+      fetchEvolution();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleIgnore = async (candId: string) => {
+    try {
+      await axios.delete(`${apiUrl}/evolution/${userId}/candidates/${candId}/ignore`);
+      fetchEvolution();
+    } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
@@ -169,17 +186,47 @@ export default function MemoryEvolutionPanel({ userId, apiUrl }: { userId: strin
             </div>
         </div>
 
-        {/* Future Capabilities Placeholder */}
-        <div className="bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-6 text-center shadow-lg relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-fuchsia-500 opacity-50"></div>
-            <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-3 flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg>
-                Future Capability
+        {/* Discovered Concepts (Candidate Memories) */}
+        <div className="bg-indigo-950/30 border border-indigo-500/20 rounded-xl p-6 shadow-lg">
+            <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+                Discovered Concepts
             </h3>
-            <p className="text-sm text-indigo-200/80 max-w-lg mx-auto leading-relaxed">
-                Future versions may automatically discover new concepts, domains, and relationships by ingesting enterprise event streams (Slack, Jira, Email). 
-                <br/><span className="text-indigo-400/60 text-xs italic mt-2 block">This feature is conceptual and not currently implemented.</span>
-            </p>
+            
+            <div className="space-y-3">
+                {candidates && candidates.length > 0 ? candidates.map((cand, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-slate-900/80 border border-indigo-500/30 hover:border-indigo-400/50 transition-colors">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded font-mono uppercase bg-indigo-500/20 text-indigo-300">{cand.type}</span>
+                                <span className="text-sm font-bold text-slate-200">{cand.name}</span>
+                            </div>
+                            <div className="flex gap-4 text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-2">
+                                <span className="text-emerald-400">Confidence: {cand.confidence}%</span>
+                                <span className="text-amber-400">Reinforcement: {cand.reinforcementCount}</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => handleIgnore(cand.id)}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-rose-900/50 hover:text-rose-400 text-slate-400 rounded text-[10px] font-bold uppercase tracking-wider transition-colors border border-slate-700 hover:border-rose-800/50"
+                            >
+                                Ignore
+                            </button>
+                            <button 
+                                onClick={() => handlePromote(cand.id)}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors shadow-lg shadow-indigo-500/20"
+                            >
+                                Promote
+                            </button>
+                        </div>
+                    </div>
+                )) : (
+                    <div className="text-center py-6 text-indigo-300/50 text-sm italic">
+                        No new concepts discovered yet. The Brain is listening...
+                    </div>
+                )}
+            </div>
         </div>
 
       </div>
