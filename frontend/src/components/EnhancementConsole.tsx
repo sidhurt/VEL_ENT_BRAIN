@@ -6,33 +6,25 @@ type ExecutionMode = 'assemble' | 'execute';
 
 export default function EnhancementConsole({ userId, apiUrl }: { userId: string, apiUrl: string }) {
   const [viewMode, setViewMode] = useState<ViewMode>('demonstration');
-  const [executionMode, setExecutionMode] = useState<ExecutionMode>('execute');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [guardrails, setGuardrails] = useState<{policy: string, reason: string, action: string, redactedPrompt?: string}[]>([]);
-  const [orgData, setOrgData] = useState<{orgName: string, policies: string[]} | null>(null);
   const [disambiguationResolved, setDisambiguationResolved] = useState(false);
 
-  // Fetch Org data to display inheritance
+  // Reset state when user changes
   useEffect(() => {
     if (userId) {
-        axios.get(`${apiUrl}/evolution/${userId}`)
-            .then(res => setOrgData(res.data.inheritance))
-            .catch(e => console.error(e));
-        
-        // Reset when user changes
         setResult(null);
         setGuardrails([]);
         setPrompt('');
         setDisambiguationResolved(false);
     }
-  }, [userId, apiUrl]);
+  }, [userId]);
 
   const handleEnhance = async (mode: ExecutionMode) => {
     if (!prompt.trim() || !userId) return;
     setLoading(true);
-    setExecutionMode(mode);
     setGuardrails([]);
     setResult(null);
     setDisambiguationResolved(false);
