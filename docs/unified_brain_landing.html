@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Brain — Context Infrastructure for Enterprise AI</title>
+    <meta name="description" content="Unified Brain assembles institutional memory, governance, and identity context before any AI interaction occurs. Enterprise AI that knows who it's talking to.">
+    <meta property="og:title" content="Unified Brain — Enterprise AI That Knows Who It's Talking To">
+    <meta property="og:description" content="Context infrastructure for enterprise AI. Assembled just-in-time. Governed by policy. Live and running.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #cbd5e1; }
+        h1, h2, h3, h4, h5, .font-heading { font-family: 'Outfit', sans-serif; }
+
+        /* Glass */
+        .glass { background: rgba(15,23,42,0.5); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.06); }
+        .glass-hover:hover { border-color: rgba(99,102,241,0.3); box-shadow: 0 8px 40px rgba(99,102,241,0.12); }
+
+        /* Blobs */
+        @keyframes blob-float { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(40px,-60px) scale(1.08);} 66%{transform:translate(-30px,30px) scale(0.93);} }
+        .blob-1 { animation: blob-float 18s ease-in-out infinite; }
+        .blob-2 { animation: blob-float 22s ease-in-out infinite reverse; }
+        .blob-3 { animation: blob-float 15s ease-in-out infinite 3s; }
+
+        /* Glow button */
+        @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.45),0 0 60px rgba(99,102,241,0.15);} 50%{box-shadow:0 0 35px rgba(168,85,247,0.7),0 0 80px rgba(168,85,247,0.25);} }
+        .btn-primary { background: linear-gradient(135deg,#4f46e5,#7c3aed,#9333ea); animation: pulse-glow 3s ease-in-out infinite; transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid rgba(255,255,255,0.15); }
+        .btn-primary:hover { transform: translateY(-2px) scale(1.02); }
+
+        /* Scroll animations */
+        .reveal { opacity:0; transform:translateY(36px); transition:opacity 0.85s cubic-bezier(0.16,1,0.3,1), transform 0.85s cubic-bezier(0.16,1,0.3,1); }
+        .reveal.visible { opacity:1; transform:translateY(0); }
+
+        /* Dash flow */
+        @keyframes dash-flow { to { stroke-dashoffset: -24; } }
+        .dash-anim { stroke-dasharray: 6 4; animation: dash-flow 1.4s linear infinite; }
+
+        /* Node pulse */
+        @keyframes node-pulse { 0%,100%{opacity:1;} 50%{opacity:0.65;} }
+
+        /* Card hover */
+        .card-lift { transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275), border-color 0.3s, box-shadow 0.3s; }
+        .card-lift:hover { transform: translateY(-6px); }
+
+        /* Gradient text */
+        .grad-text { background: linear-gradient(135deg,#a5b4fc,#c084fc,#f0abfc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .grad-text-warm { background: linear-gradient(135deg,#6366f1,#a855f7,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width:6px; }
+        ::-webkit-scrollbar-track { background:#0f172a; }
+        ::-webkit-scrollbar-thumb { background:rgba(99,102,241,0.4); border-radius:3px; }
+
+        /* Context gap big word */
+        .nothing-text { font-family:'Outfit',sans-serif; font-weight:900; font-size:clamp(80px,16vw,180px); line-height:1; background:linear-gradient(135deg,rgba(99,102,241,0.7),rgba(168,85,247,0.5)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-0.04em; }
+
+        /* Section divider */
+        .section-line { height:1px; background:linear-gradient(90deg,transparent,rgba(99,102,241,0.2),rgba(168,85,247,0.2),transparent); }
+
+        /* Policy badge */
+        @keyframes policy-flash { 0%,100%{background:rgba(244,63,94,0.1);} 50%{background:rgba(244,63,94,0.2);} }
+        .policy-badge { animation: policy-flash 2.5s ease-in-out infinite; }
+
+        /* Nav */
+        nav { transition: background 0.3s, backdrop-filter 0.3s, box-shadow 0.3s; }
+    </style>
+</head>
+
+<body class="min-h-screen relative overflow-x-hidden selection:bg-fuchsia-500/20">
+
+    <!-- Cursor glow -->
+    <div id="cursor-glow" class="fixed w-[500px] h-[500px] rounded-full blur-[120px] bg-indigo-600/8 pointer-events-none z-0 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-500 opacity-0 hidden md:block"></div>
+
+    <!-- Background blobs -->
+    <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div class="blob-1 absolute top-[-15%] right-[-10%] w-[55%] h-[55%] bg-indigo-700/15 blur-[130px] rounded-full"></div>
+        <div class="blob-2 absolute bottom-[-10%] left-[-15%] w-[55%] h-[55%] bg-fuchsia-700/12 blur-[130px] rounded-full"></div>
+        <div class="blob-3 absolute top-[45%] left-[35%] w-[30%] h-[30%] bg-violet-600/8 blur-[100px] rounded-full"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ NAV -->
+    <nav id="main-nav" class="sticky top-0 z-50 glass px-6 md:px-10 py-4 flex justify-between items-center border-b border-slate-800/60">
+        <div class="flex items-center gap-3">
+            <!-- Hexagonal graph icon -->
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.5)]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
+                    <line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/><line x1="5" y1="19" x2="19" y2="19"/>
+                </svg>
+            </div>
+            <div>
+                <span class="font-heading font-bold text-lg text-white tracking-tight">Unified Brain</span>
+                <span class="hidden md:block text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500 mt-0.5 block">Context Infrastructure</span>
+            </div>
+        </div>
+        <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+            <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
+            <a href="#governance" class="hover:text-white transition-colors">Governance</a>
+            <a href="#what-comes-next" class="hover:text-white transition-colors">Platform</a>
+            <a href="#demo" class="hover:text-white transition-colors">Live Demo</a>
+        </div>
+        <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank"
+            class="btn-primary px-5 py-2.5 rounded-xl text-white font-bold text-sm flex items-center gap-2 group">
+            Launch Demo
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transform group-hover:translate-x-0.5 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+    </nav>
+
+    <main class="relative z-10">
+
+        <!-- ═══════════════════════════════════════════ HERO -->
+        <section class="reveal max-w-7xl mx-auto px-6 md:px-10 pt-24 pb-20 grid md:grid-cols-2 gap-16 items-center">
+            <div>
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-8">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                    Context Infrastructure for Enterprise AI
+                </div>
+                <h1 class="font-heading font-black text-white leading-[1.05] tracking-tight mb-6" style="font-size:clamp(42px,6vw,72px)">
+                    Enterprise AI<br>That Knows<br><span class="grad-text">Who It's Talking To.</span>
+                </h1>
+                <p class="text-lg text-slate-400 leading-relaxed mb-10 max-w-lg">
+                    Every AI interaction your organization has today starts from zero — no identity, no institutional memory, no applicable governance. Unified Brain changes that before a single prompt reaches a model.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 mb-10">
+                    <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank"
+                        class="btn-primary px-8 py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-3 group">
+                        Experience the Context Engine
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transform group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </a>
+                    <a href="#how-it-works" class="px-8 py-4 rounded-2xl text-slate-300 font-semibold text-base border border-slate-700 hover:border-slate-500 hover:text-white transition-all flex items-center justify-center gap-2">
+                        See how it works
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                </div>
+                <div class="flex flex-wrap gap-x-6 gap-y-2 text-[11px] font-bold uppercase tracking-widest text-slate-600">
+                    <span class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>Live demo environment</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>Three enterprise personas</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-emerald-500"></span>Real-time context assembly</span>
+                </div>
+            </div>
+
+            <!-- Context Assembly Visualization -->
+            <div class="glass rounded-3xl p-6 shadow-[0_0_80px_rgba(99,102,241,0.1)] border-indigo-500/15">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Live Context Assembly
+                </div>
+                <svg viewBox="0 0 420 320" class="w-full" style="max-height:280px">
+                    <defs>
+                        <linearGradient id="lg-indigo" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.9"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0.1"/></linearGradient>
+                        <linearGradient id="lg-rose" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f43f5e" stop-opacity="0.9"/><stop offset="100%" stop-color="#f43f5e" stop-opacity="0.1"/></linearGradient>
+                        <linearGradient id="lg-fuchsia" x1="100%" y1="0%" x2="0%" y2="0%"><stop offset="0%" stop-color="#d946ef" stop-opacity="0.9"/><stop offset="100%" stop-color="#d946ef" stop-opacity="0.1"/></linearGradient>
+                        <linearGradient id="lg-emerald" x1="0%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#10b981" stop-opacity="0.9"/><stop offset="100%" stop-color="#10b981" stop-opacity="0.1"/></linearGradient>
+                        <linearGradient id="lg-sky" x1="100%" y1="100%" x2="0%" y2="0%"><stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.9"/><stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.1"/></linearGradient>
+                        <filter id="glow-cp"><feGaussianBlur stdDeviation="6" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>
+                    </defs>
+
+                    <!-- Animated connection lines -->
+                    <line x1="210" y1="68" x2="210" y2="138" stroke="url(#lg-indigo)" stroke-width="1.5" class="dash-anim" opacity="0.8"/>
+                    <line x1="76" y1="110" x2="168" y2="158" stroke="url(#lg-rose)" stroke-width="1.5" class="dash-anim" opacity="0.8" style="animation-delay:0.3s"/>
+                    <line x1="344" y1="110" x2="252" y2="158" stroke="url(#lg-fuchsia)" stroke-width="1.5" class="dash-anim" opacity="0.8" style="animation-delay:0.6s"/>
+                    <line x1="76" y1="218" x2="168" y2="178" stroke="url(#lg-emerald)" stroke-width="1.5" class="dash-anim" opacity="0.8" style="animation-delay:0.9s"/>
+                    <line x1="344" y1="218" x2="252" y2="178" stroke="url(#lg-sky)" stroke-width="1.5" class="dash-anim" opacity="0.8" style="animation-delay:1.2s"/>
+
+                    <!-- Central Context Pack -->
+                    <rect x="148" y="135" width="124" height="56" rx="12" fill="rgba(99,102,241,0.18)" stroke="#6366f1" stroke-width="1.5" filter="url(#glow-cp)"/>
+                    <text x="210" y="159" text-anchor="middle" fill="white" font-family="Outfit" font-size="13" font-weight="700">Context Pack</text>
+                    <text x="210" y="176" text-anchor="middle" fill="#818cf8" font-family="Inter" font-size="9.5">Just-In-Time Assembly</text>
+
+                    <!-- User node -->
+                    <rect x="140" y="36" width="140" height="36" rx="8" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.45)" stroke-width="1"/>
+                    <text x="210" y="55" text-anchor="middle" fill="#a5b4fc" font-family="Inter" font-size="10" font-weight="600">Identity · Role · Expertise</text>
+                    <text x="210" y="67" text-anchor="middle" fill="#6366f1" font-family="Inter" font-size="8.5" opacity="0.7">:HAS_ROLE · :EXPERT_IN</text>
+
+                    <!-- Policy node (left top) -->
+                    <rect x="12" y="88" width="128" height="40" rx="8" fill="rgba(244,63,94,0.1)" stroke="rgba(244,63,94,0.4)" stroke-width="1"/>
+                    <text x="76" y="107" text-anchor="middle" fill="#fb7185" font-family="Inter" font-size="10" font-weight="600">Enterprise Policies</text>
+                    <text x="76" y="120" text-anchor="middle" fill="#f43f5e" font-family="Inter" font-size="8" opacity="0.7">:ENFORCES · 10,000pt override</text>
+
+                    <!-- Org/Team node (right top) -->
+                    <rect x="280" y="88" width="128" height="40" rx="8" fill="rgba(217,70,239,0.1)" stroke="rgba(217,70,239,0.4)" stroke-width="1"/>
+                    <text x="344" y="107" text-anchor="middle" fill="#e879f9" font-family="Inter" font-size="10" font-weight="600">Org · Team · Structure</text>
+                    <text x="344" y="120" text-anchor="middle" fill="#d946ef" font-family="Inter" font-size="8" opacity="0.7">:MEMBER_OF · :BELONGS_TO</text>
+
+                    <!-- Projects (left bottom) -->
+                    <rect x="12" y="196" width="128" height="36" rx="8" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.4)" stroke-width="1"/>
+                    <text x="76" y="213" text-anchor="middle" fill="#34d399" font-family="Inter" font-size="10" font-weight="600">Active Projects</text>
+                    <text x="76" y="225" text-anchor="middle" fill="#10b981" font-family="Inter" font-size="8" opacity="0.7">:WORKS_ON {state: Active}</text>
+
+                    <!-- Style/Domain (right bottom) -->
+                    <rect x="280" y="196" width="128" height="36" rx="8" fill="rgba(14,165,233,0.1)" stroke="rgba(14,165,233,0.4)" stroke-width="1"/>
+                    <text x="344" y="213" text-anchor="middle" fill="#38bdf8" font-family="Inter" font-size="10" font-weight="600">Domain Memory</text>
+                    <text x="344" y="225" text-anchor="middle" fill="#0ea5e9" font-family="Inter" font-size="8" opacity="0.7">:HAS_STYLE · :PERFORMS</text>
+
+                    <!-- Output arrow -->
+                    <line x1="210" y1="191" x2="210" y2="262" stroke="rgba(99,102,241,0.4)" stroke-width="1.5" stroke-dasharray="4 3"/>
+                    <polygon points="210,275 204,263 216,263" fill="rgba(99,102,241,0.5)"/>
+                    <rect x="150" y="278" width="120" height="30" rx="6" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+                    <text x="210" y="298" text-anchor="middle" fill="#818cf8" font-family="Inter" font-size="9.5" font-weight="600">→ AI Model Receives</text>
+                </svg>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ CONTEXT GAP -->
+        <section class="reveal py-28 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <p class="text-slate-500 text-sm font-semibold uppercase tracking-widest mb-6">The Problem Every Enterprise AI Team Faces</p>
+                <p class="font-heading font-bold text-white text-2xl md:text-3xl mb-3">This is what your AI knows about your best people.</p>
+                <div class="nothing-text mt-4 mb-6">Nothing.</div>
+                <p class="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                    Not their role. Not their domain expertise. Not the active initiatives they're running. Not the governance policies that apply to every conversation they have. Not which team they belong to, or what that team's priorities are this quarter.
+                    <br><br>
+                    <span class="text-slate-300 font-semibold">Every session. Every prompt. Ground zero.</span>
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-5">
+                <div class="glass glass-hover card-lift rounded-2xl p-8 relative overflow-hidden border-slate-800/60">
+                    <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent"></div>
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-6">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Every person is a stranger.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Your AI treats your CTO and a first-day intern identically. Same model. Same generic response. Zero awareness of who they are, what they know, or what context should govern their interaction.</p>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-8 relative overflow-hidden border-slate-800/60">
+                    <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-rose-500/60 to-transparent"></div>
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-6">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Every rule is invisible.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Every policy your organization has defined — confidentiality requirements, communication standards, compliance constraints — none of it reaches the model. Your governance framework exists in a document your AI has never read.</p>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-8 relative overflow-hidden border-slate-800/60">
+                    <div class="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-fuchsia-500/60 to-transparent"></div>
+                    <div class="w-12 h-12 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center mb-6">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e879f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Every session resets.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">The projects your team is running, the priorities your leadership set last quarter, the institutional knowledge that makes your organization distinct — your AI walks in empty every single time.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ WHAT IS UNIFIED BRAIN -->
+        <section class="reveal py-24 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="max-w-3xl mb-16">
+                <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-4">What Unified Brain Is</p>
+                <h2 class="font-heading font-black text-white leading-tight mb-6" style="font-size:clamp(32px,4.5vw,54px)">
+                    Not a plugin.<br>Not a memory cache.<br><span class="grad-text">Context infrastructure.</span>
+                </h2>
+                <p class="text-slate-400 text-lg leading-relaxed">
+                    Unified Brain is the layer that assembles who a person is, what their enterprise knows, and what rules govern their work — structured into a precise context payload that reaches every AI interaction before the prompt does.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 relative">
+                <!-- Connector line between cards (desktop) -->
+                <div class="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 items-center justify-center">
+                    <div class="px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700 text-[10px] font-mono text-indigo-400 whitespace-nowrap shadow-lg">:MEMBER_OF</div>
+                </div>
+
+                <!-- Personal Brain -->
+                <div class="glass card-lift rounded-2xl overflow-hidden border-slate-800/60 hover:border-indigo-500/30">
+                    <div class="h-1 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+                    <div class="p-8">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-indigo-300 text-xl">Personal Brain</h3>
+                                <p class="text-xs text-slate-500 font-medium">Owned by the individual</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">A knowledge graph seeded at onboarding and continuously enriched by how the individual works. The model always knows who it's talking to.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Identity anchor</strong> — name, role, tenure, seniority</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Domain expertise</strong> — skills, specializations, depth of knowledge</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Active context</strong> — live projects, current tasks, recent priorities</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Communication style</strong> — tone, format preferences, output expectations</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Company Brain -->
+                <div class="glass card-lift rounded-2xl overflow-hidden border-slate-800/60 hover:border-fuchsia-500/30">
+                    <div class="h-1 bg-gradient-to-r from-fuchsia-500 to-pink-500"></div>
+                    <div class="p-8">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-12 h-12 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-fuchsia-300 text-xl">Company Brain</h3>
+                                <p class="text-xs text-slate-500 font-medium">Owned by the enterprise</p>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">The shared institutional layer. Org structure, active initiatives, communication standards, and the policies that govern every AI interaction across the entire organization.</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Org structure</strong> — teams, hierarchies, reporting lines</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Enterprise initiatives</strong> — active programs, organizational priorities</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500 mt-1.5 shrink-0"></span><span><strong class="text-white">Policy nodes</strong> — compliance rules, communication guidelines, hard constraints</span></li>
+                            <li class="flex items-start gap-3 text-sm text-slate-300"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0"></span><span><strong class="text-rose-300">Governance override</strong> — enterprise policy always wins. No exceptions.</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ HOW IT WORKS -->
+        <section id="how-it-works" class="reveal py-24 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="max-w-2xl mb-16">
+                <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-4">Mechanics</p>
+                <h2 class="font-heading font-black text-white leading-tight mb-6" style="font-size:clamp(30px,4vw,50px)">
+                    The right context,<br><span class="grad-text">assembled before the prompt lands.</span>
+                </h2>
+                <p class="text-slate-400 text-lg leading-relaxed">Context assembly is not a lookup. It is a scored, governed, relationship-aware traversal that happens in milliseconds — every time.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+                <div class="glass card-lift rounded-2xl p-7 border-slate-800/60 glass-hover relative">
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-black text-white text-base">1</div>
+                        <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Intercept</span>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Prompt is intercepted.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Before a prompt reaches any model, a silent request is made to the Unified Brain API with the user's identity and the raw prompt content.</p>
+                </div>
+                <div class="glass card-lift rounded-2xl p-7 border-slate-800/60 glass-hover relative">
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center font-heading font-black text-white text-base shadow-[0_0_20px_rgba(99,102,241,0.4)]">2</div>
+                        <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Assemble</span>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Context is scored and assembled.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-4">A five-dimension relevance engine scores every connected memory node — intent match, lifecycle state, usage frequency, temporal recency, and identity anchoring. Policy nodes score 10,000 and are always included.</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="px-2 py-1.5 bg-slate-900/60 rounded-lg border border-slate-800 text-[10px] text-slate-400"><span class="text-indigo-400 font-bold">+100</span> Identity</div>
+                        <div class="px-2 py-1.5 bg-slate-900/60 rounded-lg border border-slate-800 text-[10px] text-slate-400"><span class="text-emerald-400 font-bold">+50</span> Active state</div>
+                        <div class="px-2 py-1.5 bg-slate-900/60 rounded-lg border border-slate-800 text-[10px] text-slate-400"><span class="text-sky-400 font-bold">2×</span> Frequency</div>
+                        <div class="policy-badge px-2 py-1.5 rounded-lg border border-rose-900/50 text-[10px] text-rose-400"><span class="font-bold">10,000</span> Policy</div>
+                    </div>
+                </div>
+                <div class="glass card-lift rounded-2xl p-7 border-slate-800/60 glass-hover relative">
+                    <div class="flex items-center justify-between mb-5">
+                        <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-black text-white text-base">3</div>
+                        <span class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Deliver</span>
+                    </div>
+                    <h3 class="font-heading font-bold text-white text-lg mb-3">Context Pack is delivered.</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed mb-4">A structured JSON Context Pack returns — identity context, project context, governance policies, domain expertise, style guidance. The model receives what it needs to respond as if it has always known this person.</p>
+                    <div class="p-3 bg-[#080f1e] rounded-xl border border-slate-800/80 font-mono text-[10px] text-slate-500">
+                        <span class="text-emerald-400">identityContext</span>: {name, roles, domains}<br>
+                        <span class="text-sky-400">projectContext</span>: [{id, name, status}]<br>
+                        <span class="text-rose-400">policyContext</span>: [{rule, enforcement}]<br>
+                        <span class="text-violet-400">explainabilityReceipt</span>: [...]
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ GOVERNANCE -->
+        <section id="governance" class="reveal py-24 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <p class="text-rose-400 text-xs font-bold uppercase tracking-widest mb-4">Governance Layer</p>
+                    <h2 class="font-heading font-black text-white leading-tight mb-6" style="font-size:clamp(30px,4vw,50px)">
+                        Your rules.<br><span class="grad-text">Hardcoded into every interaction.</span>
+                    </h2>
+                    <p class="text-slate-400 text-lg leading-relaxed mb-8">Enterprise governance is not a checkbox. It is the foundation. When a user's preference conflicts with a company policy, the policy wins — every time — with a full explainability receipt proving it.</p>
+                    <div class="p-5 rounded-2xl bg-rose-950/30 border border-rose-900/40 mb-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-rose-300 font-bold text-sm mb-1">Conflict Resolution Example</p>
+                                <p class="text-slate-400 text-xs leading-relaxed">User preference: <span class="text-slate-300">Casual communication style</span><br>Enterprise policy: <span class="text-rose-300">Professional communication only</span><br>Resolution: <span class="text-emerald-400 font-semibold">Enterprise policy enforced</span> · Explainability receipt generated</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="glass card-lift rounded-2xl p-6 border-slate-800/60 glass-hover">
+                        <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        </div>
+                        <h4 class="font-heading font-bold text-white text-sm mb-2">Policy Inheritance</h4>
+                        <p class="text-slate-500 text-xs leading-relaxed">One edge connects a user to their team. Every applicable policy flows through automatically. No per-user configuration required.</p>
+                    </div>
+                    <div class="glass card-lift rounded-2xl p-6 border-slate-800/60 glass-hover">
+                        <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h4 class="font-heading font-bold text-white text-sm mb-2">Conflict Resolution</h4>
+                        <p class="text-slate-500 text-xs leading-relaxed">When personal preference conflicts with enterprise policy, the governance layer resolves it deterministically before the prompt is assembled.</p>
+                    </div>
+                    <div class="glass card-lift rounded-2xl p-6 border-slate-800/60 glass-hover">
+                        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        </div>
+                        <h4 class="font-heading font-bold text-white text-sm mb-2">Explainability Receipt</h4>
+                        <p class="text-slate-500 text-xs leading-relaxed">Every context assembly generates a transparent audit trail — which nodes were selected, why, and what policies were enforced.</p>
+                    </div>
+                    <div class="glass card-lift rounded-2xl p-6 border-slate-800/60 glass-hover">
+                        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <h4 class="font-heading font-bold text-white text-sm mb-2">Memory Evolution</h4>
+                        <p class="text-slate-500 text-xs leading-relaxed">Context that gets used rises. Context that goes dormant decays. The graph stays current without manual maintenance.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ WHAT COMES NEXT -->
+        <section id="what-comes-next" class="reveal py-24 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <p class="text-fuchsia-400 text-xs font-bold uppercase tracking-widest mb-4">Where This Goes</p>
+                <h2 class="font-heading font-black text-white leading-tight mb-6" style="font-size:clamp(30px,4vw,50px)">
+                    Every enterprise AI product<br>needs to know who it's talking to.
+                </h2>
+                <p class="text-slate-400 text-lg leading-relaxed">
+                    Enterprise AI is not one product. It is a category — assistants, copilots, agents, knowledge systems, onboarding tools. Every one of them operates with zero institutional context today. Unified Brain is the layer that changes that, regardless of which AI product is in front of it.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">AI Assistants</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">Context-grounded responses for every employee, not generic outputs.</p>
+                    </div>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">Internal Copilots</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">AI that understands org structure, team context, and current priorities.</p>
+                    </div>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">Agent Systems</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">Autonomous agents governed by enterprise policy from the first step.</p>
+                    </div>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">Knowledge Systems</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">Dynamic retrieval grounded in who is asking and what applies to them.</p>
+                    </div>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">Onboarding AI</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">New hires get institutional context from day one, assembled automatically.</p>
+                    </div>
+                </div>
+                <div class="glass glass-hover card-lift rounded-2xl p-6 border-slate-800/60 flex flex-col gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fb7185" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-heading font-bold text-white text-sm">Prompt Enhancement</p>
+                        <p class="text-slate-500 text-xs mt-1 leading-relaxed">Context-enriched prompts across any AI platform, governed by enterprise policy.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ LIVE DEMO -->
+        <section id="demo" class="reveal py-24 px-6 md:px-10 max-w-7xl mx-auto">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">Live Demo Environment</p>
+                <h2 class="font-heading font-black text-white leading-tight mb-6" style="font-size:clamp(30px,4vw,50px)">
+                    Three people.<br><span class="grad-text">Three contexts. Live.</span>
+                </h2>
+                <p class="text-slate-400 text-lg leading-relaxed">Three enterprise personas. Three distinct governance profiles. Real context assembly in your browser. Not a mockup — a working context infrastructure environment.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-5 mb-10">
+                <!-- Emma -->
+                <div class="glass card-lift rounded-2xl overflow-hidden border-slate-800/60 hover:border-fuchsia-500/25">
+                    <div class="h-0.5 bg-gradient-to-r from-fuchsia-500 to-pink-500"></div>
+                    <div class="p-7">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-600 to-pink-600 flex items-center justify-center font-heading font-black text-white text-xl shadow-[0_0_20px_rgba(217,70,239,0.4)] mb-5">E</div>
+                        <h3 class="font-heading font-bold text-white text-lg">Emma Johnson</h3>
+                        <p class="text-fuchsia-400 text-xs font-semibold uppercase tracking-widest mt-1 mb-4">Senior Content Strategy Manager</p>
+                        <div class="space-y-2 text-sm text-slate-400">
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Domains</span><span>Content Governance · Digital Marketing</span></div>
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Project</span><span>Enterprise AI Adoption Program</span></div>
+                            <div class="flex gap-2 mt-3"><span class="px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-400 text-[10px] font-bold">POLICY CONFLICT DEMO</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Siddharth -->
+                <div class="glass card-lift rounded-2xl overflow-hidden border-slate-800/60 hover:border-indigo-500/25">
+                    <div class="h-0.5 bg-gradient-to-r from-indigo-500 to-violet-500"></div>
+                    <div class="p-7">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center font-heading font-black text-white text-xl shadow-[0_0_20px_rgba(99,102,241,0.4)] mb-5">S</div>
+                        <h3 class="font-heading font-bold text-white text-lg">Siddharth S.</h3>
+                        <p class="text-indigo-400 text-xs font-semibold uppercase tracking-widest mt-1 mb-4">Enterprise Architect</p>
+                        <div class="space-y-2 text-sm text-slate-400">
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Domains</span><span>AWS · SAP Integration · Cloud Architecture</span></div>
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Projects</span><span>Unified Brain · DMS Integration</span></div>
+                            <div class="flex gap-2 mt-3"><span class="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 text-[10px] font-bold">DEEP TECHNICAL CONTEXT</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Michael -->
+                <div class="glass card-lift rounded-2xl overflow-hidden border-slate-800/60 hover:border-sky-500/25">
+                    <div class="h-0.5 bg-gradient-to-r from-sky-500 to-cyan-400"></div>
+                    <div class="p-7">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-600 to-cyan-600 flex items-center justify-center font-heading font-black text-white text-xl shadow-[0_0_20px_rgba(14,165,233,0.4)] mb-5">M</div>
+                        <h3 class="font-heading font-bold text-white text-lg">Michael T.</h3>
+                        <p class="text-sky-400 text-xs font-semibold uppercase tracking-widest mt-1 mb-4">Client Success Director</p>
+                        <div class="space-y-2 text-sm text-slate-400">
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Domains</span><span>Customer Research · Enterprise Sales</span></div>
+                            <div class="flex gap-2"><span class="text-slate-600 text-xs w-14 shrink-0 mt-0.5">Project</span><span>Revenue Intelligence Platform</span></div>
+                            <div class="flex gap-2 mt-3"><span class="px-2 py-0.5 rounded-full bg-sky-500/10 border border-sky-500/25 text-sky-400 text-[10px] font-bold">ENTERPRISE INHERITANCE</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank"
+                    class="btn-primary inline-flex items-center gap-3 px-12 py-5 rounded-2xl text-white font-bold text-lg group">
+                    Launch Interactive Demo
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="transform group-hover:translate-x-1 transition-transform"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+                <p class="text-xs text-slate-600 font-medium mt-4 uppercase tracking-widest">Live cloud infrastructure · Real-time context assembly · Not a prototype</p>
+            </div>
+        </section>
+
+        <div class="section-line mx-6 md:mx-10"></div>
+
+        <!-- ═══════════════════════════════════════════ THE MOAT STATEMENT -->
+        <section class="reveal py-28 px-6 md:px-10">
+            <div class="max-w-5xl mx-auto glass rounded-3xl p-12 md:p-16 border-slate-800/40 relative overflow-hidden text-center">
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-900/20 via-transparent to-fuchsia-900/15 pointer-events-none"></div>
+                <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
+                <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-fuchsia-500/30 to-transparent"></div>
+
+                <div class="relative z-10">
+                    <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-8">The Category Insight</p>
+                    <h2 class="font-heading font-black text-white leading-tight mb-8" style="font-size:clamp(32px,5vw,60px)">
+                        The model is not<br><span class="grad-text-warm">the moat.</span>
+                    </h2>
+                    <p class="text-slate-300 text-xl leading-relaxed max-w-3xl mx-auto mb-8">
+                        As foundation models converge in capability, the organizations that win won't be the ones with access to the most powerful model. They will be the ones whose AI knows the most about them.
+                    </p>
+                    <p class="text-slate-400 text-lg leading-relaxed max-w-2xl mx-auto mb-10">
+                        Institutional memory. Governance posture. Organizational identity. These are durable, compound, and proprietary. They accumulate over time. They do not commoditize.
+                    </p>
+                    <div class="inline-block px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                        <p class="font-heading font-bold text-white text-lg md:text-xl">
+                            Unified Brain is what enterprise context looks like when it becomes infrastructure.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════ FOOTER -->
+    <footer class="relative z-10 border-t border-slate-800/60 py-10 px-6 md:px-10 mt-8">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+                </div>
+                <div>
+                    <p class="font-heading font-bold text-white text-sm">Unified Brain</p>
+                    <p class="text-[10px] text-slate-600 font-medium uppercase tracking-widest">Context Infrastructure for Enterprise AI</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-8 text-xs text-slate-600 font-medium">
+                <a href="https://frontend-theta-seven-91.vercel.app/" target="_blank" class="hover:text-slate-400 transition-colors">Live Demo</a>
+                <a href="#how-it-works" class="hover:text-slate-400 transition-colors">How It Works</a>
+                <a href="#governance" class="hover:text-slate-400 transition-colors">Governance</a>
+            </div>
+            <p class="text-[11px] text-slate-700 font-medium">© 2026 ThinkVelocity. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Cursor glow
+        const glow = document.getElementById('cursor-glow');
+        if (window.matchMedia('(min-width:768px)').matches && glow) {
+            document.addEventListener('mousemove', e => {
+                glow.style.left = e.clientX + 'px';
+                glow.style.top = e.clientY + 'px';
+                glow.style.opacity = '1';
+            });
+            document.addEventListener('mouseleave', () => { glow.style.opacity = '0'; });
+        }
+
+        // Scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('visible'), i * 40);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Nav scroll behavior
+        const nav = document.getElementById('main-nav');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 30) {
+                nav.style.background = 'rgba(2,6,23,0.85)';
+                nav.style.backdropFilter = 'blur(24px)';
+                nav.style.boxShadow = '0 1px 40px rgba(0,0,0,0.4)';
+            } else {
+                nav.style.background = '';
+                nav.style.backdropFilter = '';
+                nav.style.boxShadow = '';
+            }
+        });
+    </script>
+</body>
+</html>

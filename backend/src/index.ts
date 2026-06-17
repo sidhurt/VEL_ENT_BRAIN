@@ -15,6 +15,7 @@ import {
     fetchEnterpriseDetails,
     attachUserToEnterprise
 } from './graphService';
+import { llmService } from './llmService';
 
 const app = express();
 app.use(cors());
@@ -207,7 +208,7 @@ app.patch('/api/project/:projectId/status', async (req, res) => {
 // Core Enhance / Context Assembly Endpoint
 app.post('/api/enhance', async (req, res) => {
     try {
-        const { userId, prompt } = req.body;
+        const { userId, prompt, executionMode = 'assemble' } = req.body;
         
         // 1. Fetch all raw memories
         const memories = await fetchAllMemories(userId);
@@ -263,11 +264,18 @@ app.post('/api/enhance', async (req, res) => {
             confidence: rc.confidence
         }));
 
-        // Note: Formatting the prompt string is delegated to an external Prompt Engine.
-        res.json({
+        let responsePayload: any = {
             contextPack,
             explainabilityReceipt
-        });
+        };
+
+        if (executionMode === 'execute') {
+            const llmResult = await llmService.execute(contextPack, prompt);
+            responsePayload.generatedOutcome = llmResult.generatedOutcome;
+            responsePayload.executionMetadata = llmResult.executionMetadata;
+        }
+
+        res.json(responsePayload);
 
     } catch (err: any) {
         res.status(500).json({ error: err.message });

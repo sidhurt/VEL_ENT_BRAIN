@@ -1,0 +1,1 @@
+import { getSession } from './src/db'; async function check() { const s = getSession(); const res = await s.run('MATCH (n) RETURN n.id as id, labels(n)[0] as label'); console.log(res.records.map(r => ({ id: r.get('id'), label: r.get('label') }))); await s.close(); process.exit(0); } check();
