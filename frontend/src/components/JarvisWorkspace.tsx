@@ -32,6 +32,13 @@ export default function JarvisWorkspace() {
     if (!userId) return;
     localStorage.setItem('vel_userId', userId);
     
+    // Clear previous user's state
+    setIdentity(null);
+    setWorkspaceState(null);
+    setTimelineArtifacts([]);
+    setActiveWork(null);
+    setPipelineTrace([]);
+    
     // Load Identity
     axios.get(`${API_URL}/cards/${userId}`).then(res => setIdentity(res.data)).catch(err => console.error(err));
     
@@ -179,7 +186,7 @@ export default function JarvisWorkspace() {
                 </div>
                 <div className="w-px h-4 bg-slate-700"></div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400">{identityRole}</span>
-                <button onClick={() => { localStorage.removeItem('vel_userId'); setUserId(''); }} className="ml-2 text-[10px] text-slate-500 hover:text-slate-300 underline">Logout</button>
+                <button onClick={() => { localStorage.removeItem('vel_userId'); setUserId(''); setSetupUserId(''); }} className="ml-2 text-[10px] text-slate-500 hover:text-slate-300 underline">Logout</button>
             </div>
         </div>
         
