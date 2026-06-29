@@ -14,12 +14,15 @@ export default function EnterpriseBrain() {
     // Overview Data
     const [stats, setStats] = useState({ users: 0, orgs: 0 });
 
+    // Forms Visibility
+    const [showOrgForm, setShowOrgForm] = useState(false);
+    const [showUserForm, setShowUserForm] = useState(false);
+
     // Org Creation Form
     const [orgName, setOrgName] = useState('');
     const [orgPolicies, setOrgPolicies] = useState('');
     const [orgProjects, setOrgProjects] = useState('');
     const [loading, setLoading] = useState(false);
-    const [createdOrgId, setCreatedOrgId] = useState('');
 
     // User Creation Form
     const [userName, setUserName] = useState('');
@@ -28,15 +31,18 @@ export default function EnterpriseBrain() {
     const [userProjects, setUserProjects] = useState('');
     const [userStyle, setUserStyle] = useState('');
     const [userOrgId, setUserOrgId] = useState('');
-    const [createdUserId, setCreatedUserId] = useState('');
     
-    // Data for dropdowns
+    // Data for dropdowns and tables
     const [enterprises, setEnterprises] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     
     // Admin context selection (for graph/evolution/governance)
     const [selectedUserId, setSelectedUserId] = useState('');
     const [graphData, setGraphData] = useState<any>(null);
+
+    // Inspection & Deletion Modals
+    const [inspectEntity, setInspectEntity] = useState<{type: 'org' | 'user', data: any} | null>(null);
+    const [deleteCandidate, setDeleteCandidate] = useState<{type: 'org' | 'user', data: any} | null>(null);
 
     const loadData = async () => {
         try {
@@ -83,14 +89,13 @@ export default function EnterpriseBrain() {
         
         try {
             await axios.post(`${API_URL}/onboard/enterprise`, {
-                userId: 'admin-seed-user', // temporary user to bind enterprise node initially if needed
+                userId: 'admin-seed-user',
                 orgId: autoOrgId,
                 orgName,
                 policies: orgPolicies.split('\n').map(s => s.trim()).filter(Boolean),
                 projects: orgProjects.split(',').map(s => s.trim()).filter(Boolean)
             });
-            setCreatedOrgId(autoOrgId);
-            setOrgName(''); setOrgPolicies(''); setOrgProjects('');
+            setOrgName(''); setOrgPolicies(''); setOrgProjects(''); setShowOrgForm(false);
             loadData();
         } catch (err) {
             console.error(err);
@@ -121,10 +126,28 @@ export default function EnterpriseBrain() {
                     orgId: userOrgId
                 });
             }
-
-            setCreatedUserId(autoUserId);
-            setUserName(''); setUserRole(''); setUserDomains(''); setUserProjects(''); setUserStyle('');
+            setUserName(''); setUserRole(''); setUserDomains(''); setUserProjects(''); setUserStyle(''); setShowUserForm(false);
             loadData();
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteCandidate) return;
+        setLoading(true);
+        try {
+            if (deleteCandidate.type === 'org') {
+                await axios.delete(`${API_URL}/enterprises/${deleteCandidate.data.id}`);
+            } else {
+                await axios.delete(`${API_URL}/users/${deleteCandidate.data.id}`);
+            }
+            setDeleteCandidate(null);
+            setInspectEntity(null);
+            loadData();
+            loadGraphData();
         } catch (err) {
             console.error(err);
         } finally {
@@ -149,24 +172,26 @@ export default function EnterpriseBrain() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-300 flex font-sans selection:bg-fuchsia-500/30">
+        <div className="flex h-screen bg-[#0b1120] text-slate-300 font-sans">
             
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 border-r border-slate-800/60 flex flex-col z-10">
-                <div className="p-6 border-b border-slate-800/60">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center shadow-[0_0_15px_rgba(192,38,211,0.5)]">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col z-30">
+                <div className="h-16 flex items-center px-6 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                            <svg className="text-slate-300" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-200">Enterprise Brain</h1>
+                        <span className="text-sm font-bold text-slate-100 uppercase tracking-widest">Enterprise Brain</span>
                     </div>
-                    <Link to="/" className="text-[10px] uppercase font-bold text-slate-500 hover:text-indigo-400 transition-colors flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                        Workspace
-                    </Link>
                 </div>
-                
-                <nav className="flex-1 p-4 space-y-2">
+
+                <div className="p-4 border-b border-slate-800/60 bg-slate-900/20">
+                    <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg border border-slate-700/50 hover:bg-slate-800 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                        ← Back to Workspace
+                    </button>
+                </div>
+
+                <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
                     {[
                         { id: 'overview', label: 'Overview', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
                         { id: 'orgs', label: 'Organizations', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2' },
@@ -234,95 +259,143 @@ export default function EnterpriseBrain() {
                     )}
 
                     {activeTab === 'orgs' && (
-                        <div className="max-w-2xl mx-auto space-y-6">
-                            <h2 className="text-xl font-medium text-slate-100 font-serif border-b border-slate-800 pb-4">Create Organization</h2>
-                            
-                            {createdOrgId && (
-                                <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center animate-in fade-in">
+                        <div className="max-w-5xl mx-auto space-y-6">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                                <h2 className="text-xl font-medium text-slate-100 font-serif">Organizations</h2>
+                                <button onClick={() => setShowOrgForm(!showOrgForm)} className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+                                    {showOrgForm ? 'Cancel' : '+ Create Organization'}
+                                </button>
+                            </div>
+
+                            {showOrgForm && (
+                                <form onSubmit={handleCreateOrg} className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-lg animate-in slide-in-from-top-4 fade-in">
                                     <div>
-                                        <h3 className="text-sm font-bold text-emerald-400">Organization Created</h3>
-                                        <p className="text-xs text-emerald-200/60 mt-0.5">ID: {createdOrgId}</p>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Organization Name</label>
+                                        <input required value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Velocity Media" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
                                     </div>
-                                    <button onClick={() => setCreatedOrgId('')} className="text-emerald-400 hover:text-emerald-300 text-xs font-bold uppercase tracking-widest">Dismiss</button>
-                                </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Enterprise Projects <span className="normal-case opacity-60">(comma sep)</span></label>
+                                        <input value={orgProjects} onChange={e => setOrgProjects(e.target.value)} placeholder="Q4 Rebrand, Security Audit" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Mandatory Policies <span className="normal-case opacity-60">(one per line)</span></label>
+                                        <textarea value={orgPolicies} onChange={e => setOrgPolicies(e.target.value)} placeholder="No speculation presented as fact.&#10;Professional communication only." rows={4} className="w-full resize-none bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
+                                    </div>
+                                    <button type="submit" disabled={loading || !orgName} className="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold uppercase tracking-widest text-xs py-3 rounded-xl disabled:opacity-50 transition-all">
+                                        {loading ? 'Creating...' : 'Establish Organization'}
+                                    </button>
+                                </form>
                             )}
 
-                            <form onSubmit={handleCreateOrg} className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-lg">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Organization Name</label>
-                                    <input required value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Velocity Media" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Enterprise Projects <span className="normal-case opacity-60">(comma sep)</span></label>
-                                    <input value={orgProjects} onChange={e => setOrgProjects(e.target.value)} placeholder="Q4 Rebrand, Security Audit" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Mandatory Policies <span className="normal-case opacity-60">(one per line)</span></label>
-                                    <textarea value={orgPolicies} onChange={e => setOrgPolicies(e.target.value)} placeholder="No speculation presented as fact.&#10;Professional communication only." rows={4} className="w-full resize-none bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-fuchsia-500 shadow-inner" />
-                                </div>
-                                <button type="submit" disabled={loading || !orgName} className="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold uppercase tracking-widest text-xs py-3 rounded-xl disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,38,211,0.4)]">
-                                    {loading ? 'Creating...' : 'Establish Organization'}
-                                </button>
-                            </form>
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-[10px] text-slate-500 uppercase tracking-widest bg-slate-950/50 border-b border-slate-800">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold">Organization</th>
+                                            <th className="px-6 py-4 font-bold">Members</th>
+                                            <th className="px-6 py-4 font-bold">Projects</th>
+                                            <th className="px-6 py-4 font-bold">Policies</th>
+                                            <th className="px-6 py-4 font-bold">Artifacts</th>
+                                            <th className="px-6 py-4 font-bold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/50">
+                                        {enterprises.map(org => (
+                                            <tr key={org.id} className="hover:bg-slate-800/30 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-slate-200">{org.name}</td>
+                                                <td className="px-6 py-4 text-slate-400">{org.membersCount || 0}</td>
+                                                <td className="px-6 py-4 text-slate-400">{org.projectsCount || 0}</td>
+                                                <td className="px-6 py-4 text-slate-400">{org.policiesCount || 0}</td>
+                                                <td className="px-6 py-4 text-slate-400">{org.artifactsCount || 0}</td>
+                                                <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                    <button onClick={() => setInspectEntity({ type: 'org', data: org })} className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 hover:text-indigo-300">View</button>
+                                                    <button onClick={() => setDeleteCandidate({ type: 'org', data: org })} className="text-[10px] font-bold uppercase tracking-widest text-red-400 hover:text-red-300">Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
                     {activeTab === 'users' && (
-                        <div className="max-w-2xl mx-auto space-y-6">
-                            <h2 className="text-xl font-medium text-slate-100 font-serif border-b border-slate-800 pb-4">Provision User</h2>
-                            
-                            {createdUserId && (
-                                <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-4 flex justify-between items-center animate-in fade-in">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-indigo-400">User Created</h3>
-                                        <p className="text-xs text-indigo-200/60 mt-0.5">ID: {createdUserId}</p>
+                        <div className="max-w-5xl mx-auto space-y-6">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                                <h2 className="text-xl font-medium text-slate-100 font-serif">Users</h2>
+                                <button onClick={() => setShowUserForm(!showUserForm)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+                                    {showUserForm ? 'Cancel' : '+ Provision User'}
+                                </button>
+                            </div>
+
+                            {showUserForm && (
+                                <form onSubmit={handleCreateUser} className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-lg animate-in slide-in-from-top-4 fade-in">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Full Name</label>
+                                            <input required value={userName} onChange={e => setUserName(e.target.value)} placeholder="Sarah Chen" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Role</label>
+                                            <input required value={userRole} onChange={e => setUserRole(e.target.value)} placeholder="Product Manager" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
+                                        </div>
                                     </div>
-                                    <button onClick={() => openInWorkspace(createdUserId)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors shadow-lg">
-                                        Open in Workspace →
+                                    
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Organization</label>
+                                        <select value={userOrgId} onChange={e => setUserOrgId(e.target.value)} className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner">
+                                            <option value="">(None)</option>
+                                            {enterprises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Domains</label>
+                                            <input value={userDomains} onChange={e => setUserDomains(e.target.value)} placeholder="Product, AI" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Projects</label>
+                                            <input value={userProjects} onChange={e => setUserProjects(e.target.value)} placeholder="Q3 Roadmap" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" disabled={loading || !userName || !userRole} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-widest text-xs py-3 rounded-xl disabled:opacity-50 transition-all">
+                                        {loading ? 'Provisioning...' : 'Provision User'}
                                     </button>
-                                </div>
+                                </form>
                             )}
 
-                            <form onSubmit={handleCreateUser} className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-lg">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Full Name</label>
-                                        <input required value={userName} onChange={e => setUserName(e.target.value)} placeholder="Sarah Chen" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Role</label>
-                                        <input required value={userRole} onChange={e => setUserRole(e.target.value)} placeholder="Product Manager" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Attach to Organization</label>
-                                    <select value={userOrgId} onChange={e => setUserOrgId(e.target.value)} className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner">
-                                        <option value="">(None)</option>
-                                        {enterprises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Domains</label>
-                                        <input value={userDomains} onChange={e => setUserDomains(e.target.value)} placeholder="Product, AI" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Projects</label>
-                                        <input value={userProjects} onChange={e => setUserProjects(e.target.value)} placeholder="Q3 Roadmap" className="w-full bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Personal Style</label>
-                                    <textarea value={userStyle} onChange={e => setUserStyle(e.target.value)} placeholder="Direct, bullet points" rows={2} className="w-full resize-none bg-slate-950 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 shadow-inner" />
-                                </div>
-
-                                <button type="submit" disabled={loading || !userName || !userRole} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-widest text-xs py-3 rounded-xl disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(79,70,229,0.4)]">
-                                    {loading ? 'Provisioning...' : 'Provision User Node'}
-                                </button>
-                            </form>
+                            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-[10px] text-slate-500 uppercase tracking-widest bg-slate-950/50 border-b border-slate-800">
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold">Name</th>
+                                            <th className="px-6 py-4 font-bold">Role</th>
+                                            <th className="px-6 py-4 font-bold">Organization</th>
+                                            <th className="px-6 py-4 font-bold">Projects</th>
+                                            <th className="px-6 py-4 font-bold">Knowledge Created</th>
+                                            <th className="px-6 py-4 font-bold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/50">
+                                        {users.map(u => (
+                                            <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-slate-200">{u.name}</td>
+                                                <td className="px-6 py-4 text-slate-400">{u.role}</td>
+                                                <td className="px-6 py-4 text-slate-400">{u.organization}</td>
+                                                <td className="px-6 py-4 text-slate-400">{u.projectsCount || 0}</td>
+                                                <td className="px-6 py-4 text-slate-400">{u.artifactsCount || 0}</td>
+                                                <td className="px-6 py-4 text-right flex justify-end gap-3">
+                                                    <button onClick={() => setInspectEntity({ type: 'user', data: u })} className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 hover:text-indigo-300">View</button>
+                                                    <button onClick={() => openInWorkspace(u.id)} className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 hover:text-emerald-300">Login</button>
+                                                    <button onClick={() => setDeleteCandidate({ type: 'user', data: u })} className="text-[10px] font-bold uppercase tracking-widest text-red-400 hover:text-red-300">Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 
@@ -364,6 +437,114 @@ export default function EnterpriseBrain() {
 
                 </div>
             </main>
+
+            {/* Inspection Panel Modal */}
+            {inspectEntity && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-lg w-full shadow-2xl animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                            <h2 className="text-xl font-medium text-slate-100 font-serif">
+                                {inspectEntity.data.name}
+                            </h2>
+                            <button onClick={() => setInspectEntity(null)} className="text-slate-500 hover:text-slate-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {inspectEntity.type === 'org' ? (
+                                <>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Members</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.membersCount || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Projects</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.projectsCount || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Policies</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.policiesCount || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between pb-2">
+                                        <span className="text-sm text-slate-400">Enterprise Knowledge Objects</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.artifactsCount || 0}</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Role</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.role}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Organization</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.organization}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-slate-800/50 pb-2">
+                                        <span className="text-sm text-slate-400">Active Projects</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.projectsCount || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between pb-2">
+                                        <span className="text-sm text-slate-400">Authored Knowledge Objects</span>
+                                        <span className="text-sm font-bold text-slate-200">{inspectEntity.data.artifactsCount || 0}</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="mt-8 text-center">
+                            <button onClick={() => setInspectEntity(null)} className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors">
+                                Close Inspection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Deletion Confirmation Modal */}
+            {deleteCandidate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-red-900/50 rounded-2xl p-8 max-w-lg w-full shadow-[0_0_40px_rgba(220,38,38,0.15)] animate-in zoom-in-95">
+                        <div className="mb-6">
+                            <h2 className="text-xl font-medium text-red-400 font-serif mb-1">
+                                Delete {deleteCandidate.type === 'org' ? 'Organization' : 'User'}
+                            </h2>
+                            <p className="text-2xl font-bold text-slate-100">{deleteCandidate.data.name}</p>
+                        </div>
+                        
+                        <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-4 mb-8">
+                            <p className="text-sm text-red-200/80 mb-3 font-medium">This will permanently remove:</p>
+                            <ul className="space-y-2 text-sm text-slate-300">
+                                {deleteCandidate.type === 'org' ? (
+                                    <>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.membersCount || 0} Members</li>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.projectsCount || 0} Projects</li>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.policiesCount || 0} Policies</li>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.artifactsCount || 0} Enterprise Knowledge Objects</li>
+                                    </>
+                                ) : (
+                                    <>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>User Identity & Roles</li>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.projectsCount || 0} Personal Projects</li>
+                                        <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{deleteCandidate.data.artifactsCount || 0} Enterprise Knowledge Links</li>
+                                    </>
+                                )}
+                            </ul>
+                            <p className="mt-4 text-xs font-bold text-red-400 uppercase tracking-widest">This action cannot be undone.</p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button onClick={() => setDeleteCandidate(null)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={handleDelete} disabled={loading} className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50">
+                                {loading ? 'Deleting...' : `Delete ${deleteCandidate.type === 'org' ? 'Organization' : 'User'}`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

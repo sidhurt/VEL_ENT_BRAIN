@@ -493,9 +493,23 @@ export const seedDemoPersonas = async () => {
 export const fetchUsers = async () => {
     const session = getSession();
     try {
-        const query = `MATCH (u:User) RETURN u.id as id, u.name as name`;
+        const query = `
+            MATCH (u:User)
+            OPTIONAL MATCH (u)-[:HAS_ROLE]->(r:Role)
+            OPTIONAL MATCH (u)-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(o:Organization)
+            OPTIONAL MATCH (u)-[:WORKS_ON]->(p:Project)
+            OPTIONAL MATCH (u)-[:AUTHORED]->(a:Artifact)
+            RETURN u.id as id, u.name as name, coalesce(r.name, 'No Role') as role, coalesce(o.name, 'No Organization') as organization, count(DISTINCT p) as projectsCount, count(DISTINCT a) as artifactsCount
+        `;
         const result = await session.run(query);
-        return result.records.map(r => ({ id: r.get('id'), name: r.get('name') }));
+        return result.records.map(r => ({
+            id: r.get('id'), 
+            name: r.get('name'),
+            role: r.get('role'),
+            organization: r.get('organization'),
+            projectsCount: r.get('projectsCount').toNumber ? r.get('projectsCount').toNumber() : Number(r.get('projectsCount')),
+            artifactsCount: r.get('artifactsCount').toNumber ? r.get('artifactsCount').toNumber() : Number(r.get('artifactsCount'))
+        }));
     } finally {
         await session.close();
     }
@@ -504,9 +518,23 @@ export const fetchUsers = async () => {
 export const fetchEnterprises = async () => {
     const session = getSession();
     try {
-        const query = `MATCH (o:Organization) RETURN o.id as id, o.name as name`;
+        const query = `
+            MATCH (o:Organization)
+            OPTIONAL MATCH (u:User)-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(o)
+            OPTIONAL MATCH (o)-[:OWNS]->(p:Project)
+            OPTIONAL MATCH (o)-[:ENFORCES]->(pol:Policy)
+            OPTIONAL MATCH (u)-[:AUTHORED]->(a:Artifact)
+            RETURN o.id as id, o.name as name, count(DISTINCT u) as membersCount, count(DISTINCT p) as projectsCount, count(DISTINCT pol) as policiesCount, count(DISTINCT a) as artifactsCount
+        `;
         const result = await session.run(query);
-        return result.records.map(r => ({ id: r.get('id'), name: r.get('name') }));
+        return result.records.map(r => ({
+            id: r.get('id'), 
+            name: r.get('name'),
+            membersCount: r.get('membersCount').toNumber ? r.get('membersCount').toNumber() : Number(r.get('membersCount')),
+            projectsCount: r.get('projectsCount').toNumber ? r.get('projectsCount').toNumber() : Number(r.get('projectsCount')),
+            policiesCount: r.get('policiesCount').toNumber ? r.get('policiesCount').toNumber() : Number(r.get('policiesCount')),
+            artifactsCount: r.get('artifactsCount').toNumber ? r.get('artifactsCount').toNumber() : Number(r.get('artifactsCount'))
+        }));
     } finally {
         await session.close();
     }

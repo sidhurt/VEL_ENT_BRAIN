@@ -220,6 +220,40 @@ app.post('/api/onboard/enterprise', async (req, res) => {
     }
 });
 
+app.delete('/api/users/:userId', async (req, res) => {
+    const session = getSession();
+    try {
+        await session.run(`MATCH (u:User {id: $userId}) DETACH DELETE u`, { userId: req.params.userId });
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
+    }
+});
+
+app.delete('/api/enterprises/:orgId', async (req, res) => {
+    const session = getSession();
+    try {
+        const { orgId } = req.params;
+        // Also optionally delete the default team for this org, and any policies/projects solely owned by it
+        // Or we can just DETACH DELETE the org and let orphaned nodes remain, but it's cleaner to delete them.
+        // For now, DETACH DELETE the org, its policies, its projects, and its teams.
+        await session.run(`
+            MATCH (o:Organization {id: $orgId})
+            OPTIONAL MATCH (o)-[:ENFORCES]->(p:Policy)
+            OPTIONAL MATCH (o)-[:OWNS]->(proj:Project)
+            OPTIONAL MATCH (t:Team)-[:BELONGS_TO]->(o)
+            DETACH DELETE o, p, proj, t
+        `, { orgId });
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
+    }
+});
+
 app.delete('/api/admin/clear', async (req, res) => {
     const session = getSession();
     try {
