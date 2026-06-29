@@ -302,7 +302,14 @@ export default function JarvisWorkspace() {
                                   </div>
                                   <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-5 rounded-2xl bg-slate-900/50 border border-slate-800/80 shadow-lg hover:border-slate-700 transition-colors">
                                       <div className="flex items-center justify-between mb-2">
-                                          <span className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-400">{artifact.type}</span>
+                                          
+                                          <div className="flex items-center gap-2">
+                                              <span className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-400">{artifact.type}</span>
+                                              {artifact.status === 'Proposed' && <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase">Proposed</span>}
+                                              {artifact.status === 'Validated' && <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase">{artifact.authority}</span>}
+                                              {artifact.status === 'Rejected' && <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase">Rejected</span>}
+                                          </div>
+
                                           <span className="text-[10px] text-slate-500">{new Date(artifact.timestamp).toLocaleString()}</span>
                                       </div>
                                       <h3 className="text-sm font-bold text-slate-200 mb-1">{artifact.prompt}</h3>

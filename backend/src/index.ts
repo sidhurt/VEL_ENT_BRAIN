@@ -21,7 +21,9 @@ import {
     saveEnterpriseArtifact,
     getWorkspaceState,
     fetchArtifactTimeline,
-    provideArtifactFeedback
+    provideArtifactFeedback,
+    fetchTrustQueue,
+    updateArtifactTrust
 } from './graphService';
 import { llmService } from './llmService';
 
@@ -263,6 +265,25 @@ app.delete('/api/admin/clear', async (req, res) => {
         res.status(500).json({ error: err.message });
     } finally {
         await session.close();
+    }
+});
+
+app.get('/api/trust/queue', async (req, res) => {
+    try {
+        const queue = await fetchTrustQueue();
+        res.json(queue);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/trust/review/:artifactId', async (req, res) => {
+    try {
+        const { action } = req.body;
+        await updateArtifactTrust(req.params.artifactId, action);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
     }
 });
 

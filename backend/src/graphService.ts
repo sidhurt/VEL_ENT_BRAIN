@@ -39,6 +39,7 @@ export const fetchAllMemories = async (userId: string): Promise<MemoryItem[]> =>
             RETURN id(e) as edgeId, p.id as id, 'Project' as type, p.name as content, 'Active' as memoryState, coalesce(e.usageCount, 0) as usageCount, coalesce(e.lastUsed, 0) as lastUsed
             UNION
             MATCH (u:User {id: $userId})-[e:AUTHORED]->(a:Artifact)
+            WHERE a.status = 'Validated' AND a.authority IN ['Verified', 'Authoritative']
             RETURN id(e) as edgeId, a.id as id, 'Artifact' as type, coalesce(a.knowledgeSummary, a.type) as content, 'Active' as memoryState, coalesce(a.weight, 1) + coalesce(e.usageCount, 0) as usageCount, CASE WHEN coalesce(e.lastUsed, 0) > coalesce(a.timestamp, 0) THEN e.lastUsed ELSE a.timestamp END as lastUsed
         `;
         const result = await session.run(query, { userId });
@@ -718,6 +719,9 @@ export const saveEnterpriseArtifact = async (
                 timestamp: $timestamp,
                 confidence: 1.0,
                 weight: 1,
+                status: 'Proposed',
+                source: 'LLM',
+                authority: 'Unverified',
                 generationModel: $generationModel,
                 brainVersion: $brainVersion,
                 contextPackVersion: $contextPackVersion,
@@ -799,7 +803,7 @@ export const fetchArtifactTimeline = async (userId: string) => {
             MATCH (u:User {id: $userId})-[:AUTHORED]->(a:Artifact)
             OPTIONAL MATCH (a)-[r]->(c)
             WITH a, collect({type: type(r), contextId: c.id, contextName: coalesce(c.name, c.ruleText, c.id), contextNodeType: labels(c)[0]}) as references
-            RETURN a.id as id, a.type as type, a.prompt as prompt, a.outcome as outcome, a.knowledgeSummary as knowledgeSummary, a.timestamp as timestamp, coalesce(a.weight, 1) as weight, references, a.retrievalConfidence as retrievalConfidence, a.generationModel as generationModel, a.promptHash as promptHash, a.brainVersion as brainVersion
+            RETURN a.id as id, a.type as type, a.prompt as prompt, a.outcome as outcome, a.knowledgeSummary as knowledgeSummary, a.timestamp as timestamp, coalesce(a.weight, 1) as weight, references, a.retrievalConfidence as retrievalConfidence, a.generationModel as generationModel, a.promptHash as promptHash, a.brainVersion as brainVersion, coalesce(a.status, 'Validated') as status, coalesce(a.source, 'LLM') as source, coalesce(a.authority, 'Verified') as authority
             ORDER BY a.timestamp DESC
         `;
         const res = await session.run(query, { userId });
@@ -811,7 +815,10 @@ export const fetchArtifactTimeline = async (userId: string) => {
             knowledgeSummary: r.get('knowledgeSummary'),
             timestamp: r.get('timestamp').toNumber ? r.get('timestamp').toNumber() : Number(r.get('timestamp')),
             weight: r.get('weight').toNumber ? r.get('weight').toNumber() : Number(r.get('weight')),
-            references: r.get('references').filter((ref: any) => ref.type !== null)
+            references: r.get('references').filter((ref: any) => ref.type !== null),
+            status: r.get('status'),
+            source: r.get('source'),
+            authority: r.get('authority')
         }));
     } finally {
         await session.close();
@@ -834,6 +841,60 @@ export const provideArtifactFeedback = async (artifactId: string, feedbackType: 
             SET a.confidence = coalesce(a.confidence, 1.0) + $confidenceDelta
             RETURN a
         `, { artifactId, weightDelta, confidenceDelta });
+    } finally {
+        await session.close();
+    }
+};
+export const fetchTrustQueue = async () => {
+    const session = getSession();
+    try {
+        const query = `
+            MATCH (u:User)-[:AUTHORED]->(a:Artifact {status: 'Proposed'})
+            OPTIONAL MATCH (a)-[r]->(c)
+            WITH u, a, collect({type: type(r), contextId: c.id, contextName: coalesce(c.name, c.ruleText, c.id), contextNodeType: labels(c)[0]}) as references
+            RETURN a.id as id, a.knowledgeSummary as summary, u.name as author, a.timestamp as timestamp, a.source as source, a.authority as authority, a.status as status, references
+            ORDER BY a.timestamp ASC
+        `;
+        const res = await session.run(query);
+        return res.records.map(r => ({
+            id: r.get('id'),
+            summary: r.get('summary'),
+            author: r.get('author'),
+            timestamp: r.get('timestamp').toNumber ? r.get('timestamp').toNumber() : Number(r.get('timestamp')),
+            source: r.get('source'),
+            authority: r.get('authority'),
+            status: r.get('status'),
+            references: r.get('references').filter((ref: any) => ref.type !== null)
+        }));
+    } finally {
+        await session.close();
+    }
+};
+
+export const updateArtifactTrust = async (artifactId: string, action: 'Validate' | 'Reject' | 'Promote' | 'Archive') => {
+    const session = getSession();
+    try {
+        let status = 'Proposed';
+        let authority = 'Unverified';
+        
+        if (action === 'Validate') {
+            status = 'Validated';
+            authority = 'Verified';
+        } else if (action === 'Promote') {
+            status = 'Validated';
+            authority = 'Authoritative';
+        } else if (action === 'Reject') {
+            status = 'Rejected';
+            authority = 'Unverified';
+        } else if (action === 'Archive') {
+            status = 'Archived';
+            authority = 'Unverified';
+        }
+
+        await session.run(`
+            MATCH (a:Artifact {id: $artifactId})
+            SET a.status = $status, a.authority = $authority
+        `, { artifactId, status, authority });
     } finally {
         await session.close();
     }
