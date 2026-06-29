@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import GraphView from './GraphView';
-import EnhancementConsole from './EnhancementConsole';
 import MemoryEvolutionPanel from './MemoryEvolutionPanel';
 import GovernanceProfile from './GovernanceProfile';
 
@@ -330,7 +329,7 @@ export default function EnterpriseBrain() {
                     {activeTab === 'governance' && (
                         <div className="max-w-4xl mx-auto space-y-6">
                             <h2 className="text-xl font-medium text-slate-100 font-serif border-b border-slate-800 pb-4">Governance Profile</h2>
-                            <GovernanceProfile userId={selectedUserId} graphData={graphData} />
+                            <GovernanceProfile apiUrl={API_URL} graphData={graphData} />
                             
                             {/* Inline Policy Add */}
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mt-6">

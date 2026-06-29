@@ -1,7 +1,7 @@
 export default function ArtifactPanel({ outcome, contextPack }: { outcome: string, contextPack: any }) {
     if (!outcome) return null;
 
-    const inferArtifactType = (taskContext: any[] = [], roles: string[] = []) => {
+    const inferArtifactType = (taskContext: any[] = []) => {
         const tasks = taskContext.map((t:any) => t.name.toLowerCase()).join(' ');
         if (tasks.includes('architecture') || tasks.includes('review')) return 'Architecture Document';
         if (tasks.includes('qbr') || tasks.includes('report')) return 'Executive Report';
@@ -10,7 +10,7 @@ export default function ArtifactPanel({ outcome, contextPack }: { outcome: strin
         return 'Enterprise Work Product';
     };
 
-    const artifactType = inferArtifactType(contextPack?.taskContext, contextPack?.identityContext?.roles);
+    const artifactType = inferArtifactType(contextPack?.taskContext);
 
     return (
         <div className="bg-slate-100 rounded-xl shadow-2xl border border-slate-300 overflow-hidden">
