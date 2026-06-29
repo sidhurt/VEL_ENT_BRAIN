@@ -45,17 +45,44 @@ export class LLMService {
             narrative += `Preferred communication style(s):\n${contextPack.styleContext.map((s: string) => `- ${s}`).join('\n')}\n\n`;
         }
 
+        if (contextPack.artifactContext && contextPack.artifactContext.length > 0) {
+            narrative += `Relevant organizational knowledge (Artifacts):\n${contextPack.artifactContext.map((a: any) => `- ${a.knowledgeSummary}`).join('\n')}\n\n`;
+        }
+
+        narrative += `IMPORTANT: You must return your response as a strictly formatted JSON object with exactly two keys:
+1. "generatedOutcome": A string containing your actual markdown response (the document/report/etc).
+2. "knowledgeExtraction": A JSON object containing:
+   - "knowledgeSummary": A 1-2 sentence summary of what this document achieved.
+   - "keyConcepts": An array of strings representing the core concepts discussed.
+   - "referencedProjects": An array of strings representing any projects mentioned.
+   
+DO NOT wrap the response in markdown code blocks. Return purely the raw JSON object.`;
+
         return narrative;
     }
 
-    async execute(contextPack: any, userPrompt: string): Promise<{ generatedOutcome: string; executionMetadata: any }> {
+    async execute(contextPack: any, userPrompt: string): Promise<{ generatedOutcome: string; knowledgeExtraction?: any; executionMetadata: any }> {
         const systemPrompt = this.translateContextPack(contextPack);
 
         try {
             // Attempt to use primary provider
             const result = await this.primaryProvider.generate(systemPrompt, userPrompt);
+            let parsedResult;
+            try {
+                let cleanText = result.text.trim();
+                if (cleanText.startsWith('\`\`\`json')) cleanText = cleanText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+                if (cleanText.startsWith('\`\`\`')) cleanText = cleanText.replace(/\`\`\`/g, '').trim();
+                parsedResult = JSON.parse(cleanText);
+            } catch (e) {
+                // Fallback if the LLM failed to return JSON
+                parsedResult = {
+                    generatedOutcome: result.text,
+                    knowledgeExtraction: { knowledgeSummary: "Summary could not be extracted.", keyConcepts: [] }
+                };
+            }
             return {
-                generatedOutcome: result.text,
+                generatedOutcome: parsedResult.generatedOutcome || result.text,
+                knowledgeExtraction: parsedResult.knowledgeExtraction,
                 executionMetadata: result.metadata
             };
         } catch (error) {
@@ -64,6 +91,7 @@ export class LLMService {
             const result = await this.fallbackProvider.generate(systemPrompt, userPrompt);
             return {
                 generatedOutcome: result.text,
+                knowledgeExtraction: { knowledgeSummary: "Mock fallback response.", keyConcepts: [] },
                 executionMetadata: result.metadata
             };
         }

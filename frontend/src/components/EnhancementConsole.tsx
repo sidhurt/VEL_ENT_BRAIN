@@ -33,39 +33,8 @@ export default function EnhancementConsole({ userId, apiUrl }: { userId: string,
     let localGuardrails: {policy: string, reason: string, action: string, redactedPrompt?: string}[] = [];
 
     let isHardStopped = false;
-    // FRONTEND-ONLY MOCK: Simulating Velocity Prompt Engine Guardrails & Policy Triggers
     const openAiKeyRegex = /(sk-|sp-|sk-proj-|sp-proj-)[A-Za-z0-9_-]+/g;
     
-    if (/secret document|confidential|internal customer data/i.test(finalPrompt)) {
-        finalPrompt = finalPrompt.replace(/secret document[s]?|confidential|internal customer data/gi, '[REDACTED_CONFIDENTIAL_INFO]');
-        localGuardrails.push({
-            policy: 'Client Confidentiality',
-            reason: 'Request references confidential enterprise information or internal documents.',
-            action: 'Confidential information blocked from payload.',
-            redactedPrompt: finalPrompt
-        });
-    }
-    
-    if (/epstein|blackmail|claim|speculat/i.test(finalPrompt)) {
-        finalPrompt = finalPrompt.replace(/claim the client uses epstein files to blackmail people|epstein files|blackmail people/gi, '[REDACTED_UNVERIFIED_CLAIM]');
-        localGuardrails.push({
-            policy: 'No Speculation Presented As Fact',
-            reason: 'Prompt contains unsupported allegations or speculative claims.',
-            action: 'Claim flagged and blocked from generation.',
-            redactedPrompt: finalPrompt
-        });
-    }
-
-    if (/market forecast|finance report/i.test(finalPrompt)) {
-        finalPrompt = finalPrompt.replace(/market forecast|finance report/gi, '[FLAGGED_FINANCIAL_REQUEST]');
-        localGuardrails.push({
-            policy: 'Financial Integrity',
-            reason: 'Financial forecasts require approved source attribution.',
-            action: 'Financial speculation blocked.',
-            redactedPrompt: finalPrompt
-        });
-    }
-
     if (openAiKeyRegex.test(finalPrompt)) {
       finalPrompt = finalPrompt.replace(openAiKeyRegex, '[REDACTED_API_KEY]');
       localGuardrails.push({

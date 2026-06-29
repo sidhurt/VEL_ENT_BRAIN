@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import CommandCenter from './components/CommandCenter'
-import AdminDashboard from './components/AdminDashboard'
+import JarvisWorkspace from './components/JarvisWorkspace'
+import EnterpriseBrain from './components/EnterpriseBrain'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<CommandCenter />} />
-        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/" element={<JarvisWorkspace />} />
+        <Route path="/enterprise" element={<EnterpriseBrain />} />
       </Routes>
     </BrowserRouter>
   )
