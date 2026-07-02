@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown';
+
 export default function ArtifactPanel({ outcome, contextPack }: { outcome: string, contextPack: any }) {
     if (!outcome) return null;
 
@@ -36,7 +38,7 @@ export default function ArtifactPanel({ outcome, contextPack }: { outcome: strin
             </div>
             
             <div className="p-8 prose prose-invert prose-slate prose-sm max-w-none text-slate-300 font-serif leading-relaxed">
-                <div className="whitespace-pre-wrap">{outcome}</div>
+                <ReactMarkdown>{outcome}</ReactMarkdown>
             </div>
         </div>
     );
