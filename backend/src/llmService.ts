@@ -49,7 +49,12 @@ export class LLMService {
             narrative += `Relevant organizational knowledge (Artifacts):\n${contextPack.artifactContext.map((a: any) => `- ${a.knowledgeSummary}`).join('\n')}\n\n`;
         }
 
-        narrative += `IMPORTANT: You must return your response as a strictly formatted JSON object with exactly two keys:
+        narrative += `CRITICAL INSTRUCTIONS FOR ENTERPRISE AI:
+1. DO NOT hallucinate or invent specific technologies, vendor names (e.g., AWS, SAP, Azure), or external integrations unless they are EXPLICITLY mentioned in the user's Context Briefing above.
+2. If the project details are sparse, generate a highly professional, abstract enterprise document focusing on internal alignment, knowledge management, structural integrity, and team collaboration.
+3. Keep the tone authoritative and consistent with the "Powered by Unified Brain" theme.
+
+IMPORTANT: You must return your response as a strictly formatted JSON object with exactly two keys:
 1. "generatedOutcome": A string containing your actual markdown response (the document/report/etc).
 2. "knowledgeExtraction": A JSON object containing:
    - "knowledgeSummary": A 1-2 sentence summary of what this document achieved.
