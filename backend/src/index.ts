@@ -521,30 +521,6 @@ app.post('/api/onboard/demo-personas', async (req, res) => {
     }
 });
 
-app.delete('/api/user/:userId', async (req, res) => {
-    const session = getSession();
-    try {
-        await session.run(`MATCH (u:User {id: $userId}) DETACH DELETE u`, { userId: req.params.userId });
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    } finally {
-        await session.close();
-    }
-});
-
-app.delete('/api/admin/clear', async (req, res) => {
-    const session = getSession();
-    try {
-        await session.run(`MATCH (n) DETACH DELETE n`);
-        res.json({ success: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    } finally {
-        await session.close();
-    }
-});
-
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`Unified Brain Backend running on http://localhost:${PORT}`);
