@@ -3,9 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const uri = process.env.NEO4J_URI || 'neo4j+s://a8a7c224.databases.neo4j.io';
-const user = process.env.NEO4J_USER || 'a8a7c224';
-const password = process.env.NEO4J_PASSWORD || 'IyItyTGvbjd6-K_gArxS8ailG59et7oJT84TwRFtVgE';
+const uri = process.env.NEO4J_URI;
+const user = process.env.NEO4J_USER;
+const password = process.env.NEO4J_PASSWORD;
+
+if (!uri || !user || !password) {
+  throw new Error(
+    'Missing required Neo4j environment variables. Set NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD before starting the server.'
+  );
+}
 
 export const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
 
