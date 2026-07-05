@@ -1,62 +1,56 @@
-# ThinkVelocity Unified Brain MVP & Specifications
+# Unified Brain (VelEntRun)
 
-This repository contains the implementation and architectural specifications for the ThinkVelocity Unified Brain assignment.
+**A constitutional context operating system** — Unified Brain assembles the
+highest-quality context that can *legitimately* participate in an AI reasoning act,
+for a given principal, under explicit governance. It solves context deficiency
+without solving it by surveillance.
 
-## Submission Deliverables
+## Start here
 
-The assignment deliverables have been met across the codebase and explicitly detailed in the accompanying design specifications:
+| Document | What it answers |
+|----------|-----------------|
+| [docs/PROJECT_STATE.md](docs/PROJECT_STATE.md) | What is this, what exists today, where is it going |
+| [docs/CONSTITUTION.md](docs/CONSTITUTION.md) | The product philosophy as ratified constitutional articles (v1.0) |
+| [docs/V1_ARCHITECTURE.md](docs/V1_ARCHITECTURE.md) | The production architecture, invariants, milestones, derogations |
 
-1. **Codebase:** Backend API demonstrating the Context Ranking Engine and dynamic memory evolution.
-2. **Graph Schema:** Provided in `neo4j-init.cypher`, covering both Personal Brain and Company Brain initialization, including the `[:REPLACES]` rollback architecture.
-3. **Design Specifications:**
-   - [Form-to-Graph Mapping](file:///C:/Users/lenovo/.gemini/antigravity-ide/brain/65b16ef0-3f22-4f76-b241-82b7a1e4c024/form_to_graph_mapping.md): Defines the exact mappings, overlap, and Consumer-to-Enterprise handoff precedence.
-   - [Brain Seeding Specification](file:///C:/Users/lenovo/.gemini/antigravity-ide/brain/65b16ef0-3f22-4f76-b241-82b7a1e4c024/brain_seeding_specification.md): Defines the Edge Weight Model, seeded vs inferred knowledge, retrieval logic, and storage/privacy boundaries.
-   - [Company Brain Specification](file:///C:/Users/lenovo/.gemini/antigravity-ide/brain/65b16ef0-3f22-4f76-b241-82b7a1e4c024/implementation_plan.md): Defines Admin forms, policy encoding, governance, versioning/rollback, and enterprise privacy compliance.
+## Run it locally
 
-## Setup Instructions
+Backend needs `backend/.env` with `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`,
+`OPENAI_API_KEY` (the server fails closed if the database vars are missing).
+Point them at a Neo4j Aura instance, or run one locally with `docker compose up -d`.
 
-### Prerequisites
-- Node.js (v20+)
-- Docker & Docker Compose (for Neo4j)
-
-### 1. Start the Graph Database
-From the root directory, start the Neo4j instance:
 ```bash
-docker compose up -d
-```
-*Wait ~15 seconds for Neo4j to initialize.*
+# terminal 1 — backend on http://localhost:3000
+cd backend && npm install && npm run seed && npm run dev
 
-### 2. Start the Backend API & Seed the Graph
-In a new terminal window:
-```bash
-cd backend
-npm install
-npm run seed  # Runs Cypher queries to setup Consumer & Enterprise schemas + metadata
-npm run dev
+# terminal 2 — frontend on http://localhost:5173
+cd frontend && npm install && npm run dev
 ```
 
-### 3. Evaluate the Relevance Engine
-The backend operates the **Memory Relevance Engine**. It relies on `usageCount`, `lastUsed`, and `memoryState` to organically evolve context.
-To test it, run the automated integration test:
+Integration test for the memory engine (server must be running):
+
 ```bash
-cd backend
-npx tsx test-engine.ts
+cd backend && npx tsx test-engine.ts
 ```
 
-This test demonstrates:
-1. Fetching the initial graph state.
-2. Firing an intent-based prompt via `/api/enhance`.
-3. Verifying that the Context Ranking Engine accurately selects relevant `Archived` context and dynamically reactivates it to `Active`.
-4. Simulating time passing via `/api/simulate-time`.
-5. Verifying that unused context organically decays back into the `Archived` layer.
+## Production
 
-## Architecture Highlights
+Deployment is Vercel, auto-triggered on push. Production additionally requires
+`JWT_SECRET` and `ADMIN_PRINCIPALS` env vars — admin routes are deny-by-default,
+and the graph-wipe endpoint is disabled outright in production. Until real login
+(OIDC) lands, keep deployments behind Vercel's deployment protection: the V1 login
+issues tokens without credential verification (documented as Derogation D4).
 
-1. **Dynamic Relevance vs Static Caching:** Context is assembled Just-In-Time by a ranking algorithm evaluating Intent, Frequency, and Recency.
-2. **Organic Evolution:** There is no manual "interact" button. The graph naturally increases edge weights when an enhancement uses a node.
-3. **Decoupled Prompt Formatting:** The Unified Brain strictly outputs a `ContextPack` JSON and an `ExplainabilityReceipt`. It delegates string formatting to the downstream Prompt Engine.
-4. **Explainability Receipt:** Every enhancement returns a structured receipt detailing exactly *what* was selected, *why* it was selected (e.g., "Matched intent", "Used recently"), and the system's *confidence* score.
+## Stack
 
-## Technology Stack
-- **Graph DB:** Neo4j (via Docker)
-- **Backend API:** Node.js, Express, TypeScript, `neo4j-driver`
+React/Vite · Express/TypeScript · Neo4j (Aura or Docker) · OpenAI · Vercel
+
+## Architecture in one paragraph
+
+The graph is a federation of constitutional planes: a **personal plane** (cognition,
+owned by the person) and an **org plane** (promoted knowledge, owned by the
+organization), connected only by the **promotion bridge** — an explicit, reviewed
+governance act. Context assembly computes authorization *before* retrieval as
+registered, parameter-bound query templates, composes only pre-authorized fragments,
+and returns an ExplainabilityReceipt for every pack. Deny is the default; failures
+close.

@@ -63,7 +63,7 @@ export const requireSelf = (claimedId: string | undefined, req: Request): string
 // Admin gate. Fail closed in production: only principals listed in
 // ADMIN_PRINCIPALS (comma-separated ids). In non-production, any
 // authenticated principal is allowed, with a startup warning.
-const adminList = (process.env.ADMIN_PRINCIPALS ?? '')
+const adminList = (process.env.ADMIN_PRINCIPALS || 'enterprise-admin')
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);

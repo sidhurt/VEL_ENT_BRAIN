@@ -199,6 +199,80 @@ app.post('/api/onboard/personal', async (req, res) => {
     }
 });
 
+app.post('/api/admin/provision-user', requireAdmin, async (req, res) => {
+    const session = getSession();
+    try {
+        const { userId, name, role, domains, projects, tasks, style } = req.body;
+        if (!userId) throw new Error("userId required");
+        
+        // 1. Create User
+        await session.run(`MERGE (u:User {id: $userId}) ON CREATE SET u.name = $name`, { userId, name });
+
+        // 2. Role
+        if (role) {
+            const roleId = 'role-' + role.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            await session.run(`
+                MATCH (u:User {id: $userId})
+                MERGE (r:Role {id: $roleId}) ON CREATE SET r.name = $role
+                MERGE (u)-[:HAS_ROLE]->(r)
+            `, { userId, roleId, role });
+        }
+
+        // 3. Domains
+        if (domains && Array.isArray(domains)) {
+            for (const domain of domains) {
+                const domId = 'domain-' + domain.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (d:Domain {id: $domId}) ON CREATE SET d.name = $domain
+                    MERGE (u)-[:EXPERT_IN]->(d)
+                `, { userId, domId, domain });
+            }
+        }
+
+        // 4. Projects
+        if (projects && Array.isArray(projects)) {
+            for (const proj of projects) {
+                const projId = 'proj-' + proj.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (p:Project {id: $projId}) ON CREATE SET p.name = $proj, p.type = 'Personal'
+                    MERGE (u)-[:WORKS_ON {memoryState: 'Active', usageCount: 10, lastUsed: timestamp()}]->(p)
+                `, { userId, projId, proj });
+            }
+        }
+
+        // 5. Tasks
+        if (tasks && Array.isArray(tasks)) {
+            for (const task of tasks) {
+                const taskId = 'task-' + task.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                await session.run(`
+                    MATCH (u:User {id: $userId})
+                    MERGE (t:Task {id: $taskId}) ON CREATE SET t.name = $task
+                    MERGE (u)-[:PERFORMS {memoryState: 'Active', usageCount: 5, lastUsed: timestamp()}]->(t)
+                `, { userId, taskId, task });
+            }
+        }
+
+        // 6. Style
+        if (style) {
+            const styleId = 'style-' + userId;
+            await session.run(`
+                MATCH (u:User {id: $userId})
+                MERGE (s:Style {id: $styleId}) ON CREATE SET s.formattingRules = $style
+                MERGE (u)-[:HAS_STYLE {memoryState: 'Active', usageCount: 5, lastUsed: timestamp()}]->(s)
+            `, { userId, styleId, style });
+        }
+
+        res.json({ success: true, message: 'User provisioned by admin' });
+    } catch (err: any) {
+        console.error("Admin Provision Error:", err);
+        res.status(500).json({ error: err.message });
+    } finally {
+        await session.close();
+    }
+});
+
 app.post('/api/onboard/enterprise', requireAdmin, async (req, res) => {
     const session = getSession();
     try {

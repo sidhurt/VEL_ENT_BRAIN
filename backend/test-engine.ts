@@ -9,9 +9,20 @@ async function runTests() {
     console.log("==========================================\n");
 
     try {
+        // Test 0: Authenticate — all API routes require a platform-issued token
+        console.log("0. Logging in as Jane...");
+        const loginRes = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ principalId: USER_ID, name: 'Jane Doe' })
+        });
+        if (!loginRes.ok) throw new Error("Login failed — is the server running?");
+        const { token } = await loginRes.json();
+        const auth = { 'Authorization': `Bearer ${token}` };
+
         // Test 1: Check initial Memory Cards to see memory states
-        console.log("1. Fetching Initial Memory Cards for Jane...");
-        const cardsRes = await fetch(`${API_URL}/cards/${USER_ID}`);
+        console.log("\n1. Fetching Initial Memory Cards for Jane...");
+        const cardsRes = await fetch(`${API_URL}/cards/${USER_ID}`, { headers: auth });
         if (!cardsRes.ok) throw new Error("Server not running or error fetching cards");
         const cards = await cardsRes.json();
         
@@ -27,9 +38,8 @@ async function runTests() {
         
         const enhanceRes = await fetch(`${API_URL}/enhance`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...auth },
             body: JSON.stringify({
-                userId: USER_ID,
                 prompt: 'Write a draft for the tech earnings reports'
             })
         });
@@ -44,7 +54,7 @@ async function runTests() {
         // Test 3: Check Memory Cards again to see if 'Q1 Tech Earnings' reactivated
         console.log("\n------------------------------------------");
         console.log("3. Fetching Memory Cards Post-Enhance to Verify Reactivation...");
-        const cardsRes2 = await fetch(`${API_URL}/cards/${USER_ID}`);
+        const cardsRes2 = await fetch(`${API_URL}/cards/${USER_ID}`, { headers: auth });
         const cards2 = await cardsRes2.json();
         
         console.log("   Updated Projects State:");
@@ -57,15 +67,15 @@ async function runTests() {
         console.log("4. Simulating 40 Days of Time Passing (Memory Decay)...");
         await fetch(`${API_URL}/simulate-time`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: USER_ID, days: 40 })
+            headers: { 'Content-Type': 'application/json', ...auth },
+            body: JSON.stringify({ days: 40 })
         });
         console.log("   Time simulation complete.");
 
         // Test 5: Check Memory Cards Post-Decay
         console.log("\n------------------------------------------");
         console.log("5. Fetching Memory Cards Post-Decay...");
-        const cardsRes3 = await fetch(`${API_URL}/cards/${USER_ID}`);
+        const cardsRes3 = await fetch(`${API_URL}/cards/${USER_ID}`, { headers: auth });
         const cards3 = await cardsRes3.json();
         
         console.log("   Final Projects State:");

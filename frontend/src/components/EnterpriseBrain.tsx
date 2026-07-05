@@ -70,8 +70,9 @@ export default function EnterpriseBrain() {
             if (uRes.data.length > 0 && !selectedUserId) {
                 setSelectedUserId(uRes.data[0].id);
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
+            alert("Failed to load Enterprise Data: " + (e.response?.data?.error || e.message));
         }
     };
 
@@ -123,7 +124,7 @@ export default function EnterpriseBrain() {
         const autoUserId = 'user-' + userName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         try {
-            await axios.post(`${API_URL}/onboard/personal`, {
+            await axios.post(`${API_URL}/admin/provision-user`, {
                 userId: autoUserId,
                 name: userName,
                 role: userRole,
