@@ -5,6 +5,7 @@ import ArtifactPanel from './ArtifactPanel';
 import BrainActivityAccordion from './BrainActivityAccordion';
 import BrainToast from './BrainToast';
 import BrainPanel from './BrainPanel';
+import { loginAs } from '../lib/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -28,20 +29,28 @@ export default function JarvisWorkspace() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const loadWorkspace = () => {
+  const loadWorkspace = async () => {
     if (!userId) return;
     localStorage.setItem('vel_userId', userId);
-    
+
     // Clear previous user's state
     setIdentity(null);
     setWorkspaceState(null);
     setTimelineArtifacts([]);
     setActiveWork(null);
     setPipelineTrace([]);
-    
+
+    // Authenticate as this principal before loading anything
+    try {
+      await loginAs(userId);
+    } catch (err) {
+      console.error('Login failed:', err);
+      return;
+    }
+
     // Load Identity
     axios.get(`${API_URL}/cards/${userId}`).then(res => setIdentity(res.data)).catch(err => console.error(err));
-    
+
     // Load Proactive State
     axios.get(`${API_URL}/workspace/state/${userId}`).then(res => setWorkspaceState(res.data)).catch(err => console.error(err));
 

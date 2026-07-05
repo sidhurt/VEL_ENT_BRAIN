@@ -286,9 +286,28 @@ export const updateProjectStatus = async (userId: string, projectId: string, new
 export const fetchGraphData = async (userId: string) => {
     const session = getSession();
     try {
+        // Directed, fixed-shape traversals only. The previous undirected [*0..3]
+        // expansion walked back through shared Team/Org hubs into colleagues'
+        // personal subgraphs (traversal amplification). Constitution Article 2 /
+        // Invariant I2: the principal sees their own context and their
+        // membership chain — nothing reachable merely because a hub connects it.
         const query = `
-            MATCH path=(u:User {id: $userId})-[*0..3]-(n)
-            WHERE 'User' IN labels(n) OR 'Project' IN labels(n) OR 'Style' IN labels(n) OR 'Team' IN labels(n) OR 'Organization' IN labels(n) OR 'Policy' IN labels(n) OR 'Role' IN labels(n) OR 'Domain' IN labels(n) OR 'Task' IN labels(n)
+            MATCH path=(u:User {id: $userId})-[:WORKS_ON|HAS_STYLE|HAS_ROLE|EXPERT_IN|PERFORMS]->()
+            RETURN path
+            UNION
+            MATCH path=(u:User {id: $userId})-[:MEMBER_OF]->(:Team)
+            RETURN path
+            UNION
+            MATCH path=(u:User {id: $userId})-[:MEMBER_OF]->(:Team)-[:ENFORCES]->(:Policy)
+            RETURN path
+            UNION
+            MATCH path=(u:User {id: $userId})-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(:Organization)
+            RETURN path
+            UNION
+            MATCH path=(u:User {id: $userId})-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(:Organization)-[:ENFORCES]->(:Policy)
+            RETURN path
+            UNION
+            MATCH path=(u:User {id: $userId})-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(:Organization)-[:OWNS]->(:Project)
             RETURN path
         `;
         const result = await session.run(query, { userId });
@@ -591,13 +610,15 @@ export const upsertCandidateEntity = async (userId: string, entityType: string, 
         const query = `
             MATCH (u:User {id: $userId})
             MERGE (c:Candidate {id: $candId}) 
-            ON CREATE SET 
-                c.type = $entityType, 
-                c.name = $entityName, 
-                c.confidence = $confidence, 
-                c.reinforcementCount = 1, 
-                c.firstSeen = timestamp(), 
-                c.lastSeen = timestamp()
+            ON CREATE SET
+                c.type = $entityType,
+                c.name = $entityName,
+                c.confidence = $confidence,
+                c.reinforcementCount = 1,
+                c.firstSeen = timestamp(),
+                c.lastSeen = timestamp(),
+                c.ownerId = $userId,
+                c.constitutionVersion = '1.0'
             ON MATCH SET 
                 c.reinforcementCount = c.reinforcementCount + 1, 
                 c.lastSeen = timestamp()
@@ -727,7 +748,9 @@ export const saveEnterpriseArtifact = async (
                 contextPackVersion: $contextPackVersion,
                 policyVersion: $policyVersion,
                 promptHash: $promptHash,
-                retrievalConfidence: $retrievalConfidence
+                retrievalConfidence: $retrievalConfidence,
+                ownerId: $userId,
+                constitutionVersion: '1.0'
             })
             CREATE (u)-[:AUTHORED]->(a)
         `, {
@@ -845,17 +868,26 @@ export const provideArtifactFeedback = async (artifactId: string, feedbackType: 
         await session.close();
     }
 };
-export const fetchTrustQueue = async () => {
+export const fetchTrustQueue = async (reviewerId: string) => {
     const session = getSession();
     try {
+        // Scoped to the reviewer's own proposals plus proposals from users who
+        // share an organization with them. Previously unscoped: every proposed
+        // artifact from every user/org was visible to any caller.
         const query = `
+            MATCH (r:User {id: $reviewerId})
             MATCH (u:User)-[:AUTHORED]->(a:Artifact {status: 'Proposed'})
-            OPTIONAL MATCH (a)-[r]->(c)
-            WITH u, a, collect({type: type(r), contextId: c.id, contextName: coalesce(c.name, c.ruleText, c.id), contextNodeType: labels(c)[0]}) as references
+            WHERE u.id = r.id
+               OR EXISTS {
+                    MATCH (r)-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(o:Organization),
+                          (u)-[:MEMBER_OF]->(:Team)-[:BELONGS_TO]->(o)
+                  }
+            OPTIONAL MATCH (a)-[rel]->(c)
+            WITH u, a, collect({type: type(rel), contextId: c.id, contextName: coalesce(c.name, c.ruleText, c.id), contextNodeType: labels(c)[0]}) as references
             RETURN a.id as id, a.knowledgeSummary as summary, u.name as author, a.timestamp as timestamp, a.source as source, a.authority as authority, a.status as status, references
             ORDER BY a.timestamp ASC
         `;
-        const res = await session.run(query);
+        const res = await session.run(query, { reviewerId });
         return res.records.map(r => ({
             id: r.get('id'),
             summary: r.get('summary'),

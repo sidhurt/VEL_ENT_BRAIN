@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import GraphView from './GraphView';
 import MemoryEvolutionPanel from './MemoryEvolutionPanel';
 import GovernanceProfile from './GovernanceProfile';
+import { loginAs } from '../lib/auth';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -51,6 +52,9 @@ export default function EnterpriseBrain() {
     const loadData = async () => {
 
         try {
+            // Console operates as the admin principal (dev-permissive in
+            // non-production; ADMIN_PRINCIPALS gates this in production).
+            await loginAs('enterprise-admin');
 
             const [uRes, eRes, tRes] = await Promise.all([
                 axios.get(`${API_URL}/users`),
