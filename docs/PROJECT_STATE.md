@@ -115,9 +115,26 @@ require a redeploy to take effect.
 |---|------|--------|
 | 1 | **Neo4j password rotation.** The database password currently in use is the same one that was exposed in git history. Stripping it from source did not un-expose it. | ⚠️ **Rotate in the Aura console, then update `backend/.env` and Vercel env, then redeploy. Highest-priority open item.** |
 | 2 | **Dev-grade login (Derogation D4).** Anyone can obtain a token for any principal id — no password/OIDC yet. Mitigations: unguessable admin id, Vercel deployment protection recommended. | Acceptable for guided demos only; OIDC required before any external user |
-| 3 | **Admin console constitutional tension.** The per-user Graph and Evolution tabs let an org admin view personal context — an Article 19 violation. They now 403 by design. | Founder decision pending: remove the tabs, or re-scope them to org-plane data |
-| 4 | **Subject rights** (constitutional gap). Cognition is protected for its *originator*; its *subject* (a person mentioned in it) has no protections yet. | Open constitutional question, deliberately deferred |
-| 5 | Planes share one Neo4j instance (Derogation D1); operator can technically read data (D2); external LLM witness (D3). | Disclosed derogations with stated exit paths — see V1_ARCHITECTURE.md §8 |
+| 3 | **Admin gate configuration.** Production requires `ADMIN_PRINCIPALS` (backend) and `VITE_ADMIN_PRINCIPAL` (frontend build) to be set **to the same value** in Vercel, or the enterprise console 403s. There is deliberately no production default — a well-known default admin id plus passwordless login would be a public backdoor. | Set both in Vercel env; use an unguessable id |
+| 4 | **Admin console constitutional tension.** The per-user Graph and Evolution tabs let an org admin view personal context — an Article 19 violation. They now 403 by design. | Founder decision pending: remove the tabs, or re-scope them to org-plane data |
+| 5 | **Subject rights** (constitutional gap). Cognition is protected for its *originator*; its *subject* (a person mentioned in it) has no protections yet. | Open constitutional question, deliberately deferred |
+| 6 | Planes share one Neo4j instance (Derogation D1); operator can technically read data (D2); external LLM witness (D3). | Disclosed derogations with stated exit paths — see V1_ARCHITECTURE.md §8 |
+
+### Incident log
+
+**2026-07-06 — M0 rollout incidents.** (a) `npm run seed` executed
+`neo4j-init.cypher`, whose first statement wipes the entire database; it was run
+against the live Aura instance and destroyed real data (recovered via Aura
+snapshot). The seed script now refuses to run against a non-empty database unless
+`SEED_ALLOW_WIPE=true`. (b) The production admin gate 403'd the enterprise console
+because `ADMIN_PRINCIPALS` in Vercel didn't match the console's login principal —
+resolved by making the console principal configurable (`VITE_ADMIN_PRINCIPAL`);
+the interim hotfix of hardcoding a production default admin id was reverted as a
+backdoor. (c) Admin user-provisioning silently overwrote the admin's own graph
+after M0 moved identity to the token; fixed with a dedicated
+`POST /api/admin/provision-user` endpoint. Lessons now enforced in code: seeds
+guard against non-empty databases; admin identity is configuration, never a
+hardcoded default.
 
 ---
 

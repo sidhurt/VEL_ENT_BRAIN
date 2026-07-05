@@ -61,15 +61,19 @@ export const requireSelf = (claimedId: string | undefined, req: Request): string
 };
 
 // Admin gate. Fail closed in production: only principals listed in
-// ADMIN_PRINCIPALS (comma-separated ids). In non-production, any
-// authenticated principal is allowed, with a startup warning.
-const adminList = (process.env.ADMIN_PRINCIPALS || 'enterprise-admin')
+// ADMIN_PRINCIPALS (comma-separated ids). There is deliberately NO production
+// default — login is unauthenticated (Derogation D4), so a well-known default
+// admin id would let anyone on the internet become admin. Non-production
+// defaults to 'enterprise-admin' for local convenience.
+const adminEnv = process.env.ADMIN_PRINCIPALS
+    ?? (process.env.NODE_ENV !== 'production' ? 'enterprise-admin' : '');
+const adminList = adminEnv
     .split(',')
     .map(s => s.trim())
     .filter(Boolean);
 
-if (adminList.length === 0 && process.env.NODE_ENV !== 'production') {
-    console.warn('[auth] ADMIN_PRINCIPALS not set — dev mode grants admin routes to any authenticated principal.');
+if (adminList.length === 0 && process.env.NODE_ENV === 'production') {
+    console.warn('[auth] ADMIN_PRINCIPALS not set — all admin routes will return 403 until it is configured.');
 }
 
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {

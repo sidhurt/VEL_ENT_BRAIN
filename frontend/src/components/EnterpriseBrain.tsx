@@ -52,9 +52,10 @@ export default function EnterpriseBrain() {
     const loadData = async () => {
 
         try {
-            // Console operates as the admin principal (dev-permissive in
-            // non-production; ADMIN_PRINCIPALS gates this in production).
-            await loginAs('enterprise-admin');
+            // Console operates as the admin principal. Must match the backend's
+            // ADMIN_PRINCIPALS list — configurable so production can use an
+            // unguessable id (set VITE_ADMIN_PRINCIPAL at build time).
+            await loginAs(import.meta.env.VITE_ADMIN_PRINCIPAL || 'enterprise-admin');
 
             const [uRes, eRes, tRes] = await Promise.all([
                 axios.get(`${API_URL}/users`),

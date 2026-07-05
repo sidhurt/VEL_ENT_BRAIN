@@ -383,7 +383,7 @@ app.get('/api/trust/queue', async (req, res) => {
 app.post('/api/trust/review/:artifactId', requireAdmin, async (req, res) => {
     try {
         const { action } = req.body;
-        await updateArtifactTrust(req.params.artifactId, action);
+        await updateArtifactTrust(String(req.params.artifactId), action);
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -599,7 +599,7 @@ app.get('/api/enterprises', requireAdmin, async (req, res) => {
 
 app.get('/api/enterprise/:orgId/details', requireAdmin, async (req, res) => {
     try {
-        const details = await fetchEnterpriseDetails(req.params.orgId);
+        const details = await fetchEnterpriseDetails(String(req.params.orgId));
         res.json(details);
     } catch (err: any) {
         res.status(500).json({ error: err.message });

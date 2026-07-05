@@ -21,11 +21,16 @@ Point them at a Neo4j Aura instance, or run one locally with `docker compose up 
 
 ```bash
 # terminal 1 — backend on http://localhost:3000
-cd backend && npm install && npm run seed && npm run dev
+cd backend && npm install && npm run dev
 
 # terminal 2 — frontend on http://localhost:5173
 cd frontend && npm install && npm run dev
 ```
+
+> ⚠️ **`npm run seed` WIPES THE DATABASE** before inserting demo data
+> (`neo4j-init.cypher` starts with `MATCH (n) DETACH DELETE n`). Only run it
+> against a brand-new, empty database. The script now refuses to run against a
+> non-empty database unless `SEED_ALLOW_WIPE=true` is set.
 
 Integration test for the memory engine (server must be running):
 
