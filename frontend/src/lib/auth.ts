@@ -31,8 +31,7 @@ axios.interceptors.request.use(config => {
     if (config.url?.endsWith('/auth/login')) return config;
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
-        config.headers = config.headers ?? {};
-        config.headers.Authorization = `Bearer ${token}`;
+        config.headers.set('Authorization', `Bearer ${token}`);
     }
     return config;
 });
