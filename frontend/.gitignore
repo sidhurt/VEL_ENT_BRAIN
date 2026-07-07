@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# local env files
+.env.production
+.env.local
+
+# vercel
+.vercel/
