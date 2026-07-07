@@ -1,5 +1,4 @@
 import mammoth from 'mammoth';
-import { PDFParse } from 'pdf-parse';
 
 const MAX_TEXT_CHARS = 60_000; // extraction chunker handles the rest
 
@@ -16,18 +15,32 @@ const clean = (raw: string): string =>
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
+// pdf-parse v2 bundles pdfjs-dist which references DOMMatrix at import time.
+// DOMMatrix is a browser-only global — not available in Vercel's serverless
+// Node.js runtime. Lazy-importing + polyfilling avoids the cold-start crash.
+const parsePDF = async (buffer: Buffer): Promise<string> => {
+    // Polyfill DOMMatrix if missing (serverless / plain Node.js environments)
+    if (typeof globalThis.DOMMatrix === 'undefined') {
+        (globalThis as any).DOMMatrix = class DOMMatrix {
+            constructor() { return Object.create(DOMMatrix.prototype); }
+        };
+    }
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    try {
+        const result = await parser.getText();
+        return result.text;
+    } finally {
+        await parser.destroy();
+    }
+};
+
 export const parseDocument = async (buffer: Buffer, filename: string): Promise<ParsedDocument> => {
     const ext = (filename.toLowerCase().split('.').pop() || '').trim();
     let text: string;
     switch (ext) {
         case 'pdf': {
-            const parser = new PDFParse({ data: new Uint8Array(buffer) });
-            try {
-                const result = await parser.getText();
-                text = result.text;
-            } finally {
-                await parser.destroy();
-            }
+            text = await parsePDF(buffer);
             break;
         }
         case 'docx': {
@@ -55,3 +68,4 @@ export const parseDocument = async (buffer: Buffer, filename: string): Promise<P
     const truncated = text.length > MAX_TEXT_CHARS;
     return { text: truncated ? text.slice(0, MAX_TEXT_CHARS) : text, format: ext, truncated };
 };
+
