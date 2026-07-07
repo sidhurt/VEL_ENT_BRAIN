@@ -118,7 +118,8 @@ Return a JSON array of objects with keys: "type" (must be "Project", "Task", or 
             }
         } catch (e) {
             console.error('Extraction failed or not JSON:', e);
-            // Deterministic mock extraction for Demo
+            // Deterministic fallback so the demo flow still shows candidate
+            // extraction when the LLM call fails (no API key / offline).
             if (prompt.toLowerCase().includes('q4 velocity media')) {
                 return [{ type: 'Project', name: 'Q4 Velocity Media', confidence: 91 }];
             }

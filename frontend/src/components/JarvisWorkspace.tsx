@@ -5,7 +5,8 @@ import ArtifactPanel from './ArtifactPanel';
 import BrainActivityAccordion from './BrainActivityAccordion';
 import BrainToast from './BrainToast';
 import BrainPanel from './BrainPanel';
-import { loginAs } from '../lib/auth';
+import { loginAs, currentPrincipalId } from '../lib/auth';
+import GoogleSignIn from './GoogleSignIn';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -40,12 +41,17 @@ export default function JarvisWorkspace() {
     setActiveWork(null);
     setPipelineTrace([]);
 
-    // Authenticate as this principal before loading anything
-    try {
-      await loginAs(userId);
-    } catch (err) {
-      console.error('Login failed:', err);
-      return;
+    // Authenticate as this principal before loading anything.
+    // If a valid token for this principal already exists (e.g. Google sign-in
+    // just completed), do NOT dev-login over it — that would replace a
+    // verified identity with an asserted one (and 403s in production).
+    if (currentPrincipalId() !== userId) {
+      try {
+        await loginAs(userId);
+      } catch (err) {
+        console.error('Login failed:', err);
+        return;
+      }
     }
 
     // Load Identity
@@ -148,8 +154,16 @@ export default function JarvisWorkspace() {
                       </div>
                   </div>
                   <h1 className="text-xl font-bold text-slate-100 text-center mb-2">Welcome to Jarvis</h1>
-                  <p className="text-sm text-slate-400 text-center mb-8">Enter your User ID to connect to the Enterprise Brain.</p>
-                  
+                  <p className="text-sm text-slate-400 text-center mb-8">Sign in to connect to the Enterprise Brain.</p>
+
+                  <GoogleSignIn onSignIn={(principal) => setUserId(principal.id)} />
+
+                  <div className="flex items-center gap-3 my-6">
+                      <div className="flex-1 h-px bg-slate-800"></div>
+                      <span className="text-[10px] uppercase tracking-widest text-slate-600">or dev access</span>
+                      <div className="flex-1 h-px bg-slate-800"></div>
+                  </div>
+
                   <form onSubmit={(e) => { e.preventDefault(); setUserId(setupUserId); }} className="space-y-4">
                       <div>
                           <input 

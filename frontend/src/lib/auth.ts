@@ -26,6 +26,19 @@ export function currentPrincipalId(): string | null {
     return localStorage.getItem(PRINCIPAL_KEY);
 }
 
+// Public by design — this ID ships in the bundle and is validated server-side.
+export const GOOGLE_CLIENT_ID =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    '754202982237-k1v6n4u2kihs0g68am5164nq4p5ku88r.apps.googleusercontent.com';
+
+// Exchange a Google ID token (from the GIS button) for a platform JWT.
+export async function loginWithGoogle(credential: string): Promise<Principal> {
+    const res = await axios.post(`${API_URL}/auth/google`, { credential });
+    localStorage.setItem(TOKEN_KEY, res.data.token);
+    localStorage.setItem(PRINCIPAL_KEY, res.data.principal.id);
+    return res.data.principal;
+}
+
 // Attach the bearer token to every request except login itself.
 axios.interceptors.request.use(config => {
     if (config.url?.endsWith('/auth/login')) return config;

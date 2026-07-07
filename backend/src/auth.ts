@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 
 // Platform-issued identity (V1, Derogation D4 in docs/V1_ARCHITECTURE.md).
 // Org membership is org-plane data, never identity: offboarding must never
@@ -32,6 +33,38 @@ declare global {
 
 export const issueToken = (principal: Principal): string =>
     jwt.sign({ sub: principal.id, name: principal.name }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+
+// --- Google Sign-In (B2) ----------------------------------------------------
+// The client ID is public by design (it ships in the frontend bundle); env
+// override exists for future deployments with their own OAuth client.
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+    || '754202982237-k1v6n4u2kihs0g68am5164nq4p5ku88r.apps.googleusercontent.com';
+
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+export interface GoogleIdentity {
+    id: string;      // 'g-' + Google's stable subject id
+    name: string;
+    email?: string;
+}
+
+export const verifyGoogleCredential = async (credential: string): Promise<GoogleIdentity> => {
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.sub) throw new Error('Google token has no subject');
+    return {
+        id: 'g-' + payload.sub,
+        name: payload.name || payload.email || 'Google User',
+        email: payload.email,
+    };
+};
+
+// Dev login (password-less, identity-asserted) is a pre-OAuth scaffold.
+// Non-production: allowed. Production: only with explicit ALLOW_DEV_LOGIN=true
+// (currently required by the admin console; flipped off when the Client Room
+// ships with Google-only auth).
+export const devLoginAllowed =
+    process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEV_LOGIN === 'true';
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
     const header = req.headers.authorization;
