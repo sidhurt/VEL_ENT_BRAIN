@@ -43,16 +43,33 @@ outsider principal got **403 on brain, enhance, and list** — walls verified.
 
 Ordered by launch-blocking priority. None require engine changes.
 
-### B1 — File parsing for ingestion (≈2 days)
-`/api/clients/:id/ingest` currently takes extracted `text`. Add multipart upload + parse to text:
-- PDF → `pdf-parse`; DOCX → `mammoth`; PPTX → `officeparser` or unzip+XML; TXT/MD passthrough.
-- New route `POST /api/clients/:id/ingest-file` (multipart via `multer`), extract text, then call the **existing** `extractClientKnowledge` + `proposeKnowledge` path. Cap file size (~15MB) and total extracted text (~40k chars → chunker handles it).
-- Acceptance: upload a real PDF brand deck, get candidates in the review queue.
+### B1 — File parsing for ingestion ✅ BUILT & TESTED (2026-07-06)
+`POST /api/clients/:id/ingest-file` (multipart field `file`, 15MB cap, in-memory —
+serverless-safe). PDF via `pdf-parse` v2 (`PDFParse` class API — note: v1 examples
+online are wrong for this package version), DOCX via `mammoth`, TXT/MD passthrough.
+Parsing lives in `backend/src/fileParsing.ts`; feeds the existing
+`extractClientKnowledge` → `proposeKnowledge` path. Text capped at 60k chars;
+<100 extractable chars → 422 (catches scanned/image-only PDFs); unsupported
+extensions → 422. **Tested end-to-end:** generated PDF uploaded through the API →
+5 correctly-classified candidates in the review queue. Remaining nice-to-haves:
+PPTX support (`officeparser`), OCR for scanned PDFs — both post-dogfood.
 
-### B2 — Google Sign-In (≈2–3 days) — Blocker, needs founder to create OAuth client
-- Backend: verify Google ID token (`google-auth-library`), MERGE `(:User {id: 'google-'+sub})` with name/email, issue the existing JWT. Keep dev login behind `NODE_ENV !== 'production'`.
-- Frontend: Google button → send credential to `POST /api/auth/google` → store returned JWT (reuse `lib/auth.ts`).
-- Founder provides: OAuth Client ID from Google Cloud Console (10 min). This is the whole identity story for the agency market (all on Google Workspace).
+### B2 — Google Sign-In ✅ BUILT (2026-07-07) — needs one human click-test
+- Backend: `POST /api/auth/google` verifies the Google ID token (`google-auth-library`,
+  audience = our client ID), MERGEs `(:User {id: 'g-'+sub})` with name/email/provider,
+  issues the platform JWT. Negative paths tested (422 no credential, 401 garbage).
+- Frontend: `GoogleSignIn.tsx` (official GIS button), `loginWithGoogle()` in `lib/auth.ts`,
+  wired into the Jarvis entry screen above a "dev access" divider. `loadWorkspace` no
+  longer dev-logins over an existing verified token.
+- Dev login is now **disabled in production unless `ALLOW_DEV_LOGIN=true`** (set on
+  Vercel — required by the admin console until the Client Room ships Google-only;
+  flipping it to false is the B4 cutover step).
+- OAuth client: `754202982237-k1v6n4u2kihs0g68am5164nq4p5ku88r` (project "unified
+  brain"); origins: localhost:5173 + frontend-theta-seven-91.vercel.app. Consent
+  screen is in **Testing** mode — add teammates as test users until published.
+- Remaining: human click-test of the real Google flow (can't be automated headlessly);
+  new Google users have no org membership until attached (`/api/enterprise/attach-user`) —
+  the Client Room onboarding flow should absorb this.
 
 ### B3 — Embeddings retrieval (≈1 week)
 Replace keyword `rankItems` with vectors. Neo4j 5 has native vector indexes.

@@ -7,23 +7,26 @@ This guide is for contributors and engineers actively building or maintaining Un
 ```text
 ├── backend/                  # The Assembly Engine & Graph Service
 │   ├── src/
-│   │   ├── auth.ts           # Authentication & ReBAC
-│   │   ├── db.ts             # Legacy DB export (deprecated)
-│   │   ├── graphService.ts   # Core Graph traversals & Context Assembly
-│   │   ├── index.ts          # Express Server and API Routes
-│   │   ├── llmService.ts     # OpenAI integrations
-│   │   ├── planes.ts         # Plane configurations and DB drivers
-│   │   └── seed.ts           # Demo Database Initialization
-│   └── test-engine.ts        # Integration testing suite
+│   │   ├── auth.ts           # JWT + Google Sign-In verification, admin gate
+│   │   ├── clientBrain.ts    # Client Brain: walls, promotion lifecycle, assembly, receipts
+│   │   ├── extraction.ts     # Document → structured knowledge candidates (LLM)
+│   │   ├── fileParsing.ts    # PDF / DOCX / TXT / MD → text
+│   │   ├── db.ts             # Legacy shared-session accessor (delegates to planes)
+│   │   ├── graphService.ts   # Original memory engine: traversals & assembly
+│   │   ├── index.ts          # Express server and API routes
+│   │   ├── llmService.ts     # Provider wrapper (OpenAI primary, mock fallback)
+│   │   ├── planes.ts         # Plane authority separation & DB drivers
+│   │   └── seed.ts           # Demo database initialization (guarded)
+│   └── test-engine.ts        # Integration test for the memory engine
 │
 ├── frontend/                 # The Enterprise Console & User Workspace
 │   ├── src/
-│   │   ├── components/       # UI Components (EnterpriseBrain.tsx, MemoryEvolutionPanel, etc)
-│   │   ├── lib/auth.ts       # Axios interceptors and token management
+│   │   ├── components/       # UI (JarvisWorkspace, EnterpriseBrain, GoogleSignIn, …)
+│   │   ├── lib/auth.ts       # Token management, Google exchange, Axios interceptors
 │   │   ├── App.tsx           # React Router
 │   │   └── index.css         # Styling (Tailwind)
 │
-└── docs/                     # Layered Information Architecture (You are here)
+└── docs/                     # Documentation (see README doc map)
 ```
 
 ## Backend
@@ -53,17 +56,28 @@ Unified Brain heavily leverages Neo4j for its graph-based Assembly Engine.
 | `JWT_SECRET` | Required in production to sign Auth tokens. |
 | `ADMIN_PRINCIPALS` | Required in production. Comma-separated list of unguessable IDs allowed to access the Enterprise Console. |
 | `SEED_ALLOW_WIPE` | Must be explicitly set to `true` to run the database seed script on a non-empty database. |
+| `ALLOW_DEV_LOGIN` | Production only: set `true` to keep the identity-asserted dev login enabled (currently required by the Enterprise Console; see [AUTHORIZATION.md](AUTHORIZATION.md) §3 cutover). |
+| `GOOGLE_CLIENT_ID` | Optional override of the Google OAuth client ID (a public value; a default is compiled in). |
+| `EXTRACTION_MODEL` | Model for document knowledge extraction (default `gpt-4o-mini`; a stronger model sharpens extraction titles). |
+| `GENERATION_MODEL` | Model for client-scoped generation (default `gpt-4o-mini`). |
 
 ### Frontend (`frontend/.env`)
 | Variable | Purpose |
 |----------|---------|
 | `VITE_API_URL` | URL of the backend API (defaults to `http://localhost:3000/api`) |
 | `VITE_ADMIN_PRINCIPAL` | The ID used to automatically log in to the Enterprise Console in production. Must match one of the `ADMIN_PRINCIPALS` in the backend. |
+| `VITE_GOOGLE_CLIENT_ID` | Optional override of the Google OAuth client ID (public value; a default is compiled in). |
 
 ## Authentication
-Unified Brain currently uses platform-issued JSON Web Tokens (JWT) (Derogation D4).
-- **Backend:** Tokens are extracted from the `Authorization: Bearer <token>` header. The identity is sourced *only* from the token (`req.principal.id`), never from the request body.
-- **Frontend:** Handled by `lib/auth.ts`, which injects the Bearer token into all Axios requests.
+Two login paths issue the same platform JWT (full detail: [AUTHORIZATION.md](AUTHORIZATION.md)):
+- **Google Sign-In** (`POST /api/auth/google`) — the verified-identity path; the entry
+  screen renders Google's official button (`GoogleSignIn.tsx`).
+- **Dev login** (`POST /api/auth/login`) — identity-asserted scaffold; disabled in
+  production unless `ALLOW_DEV_LOGIN=true`.
+
+In all cases: tokens travel as `Authorization: Bearer <token>`; identity is sourced
+*only* from the validated token (`req.principal.id`), never from the request body;
+`lib/auth.ts` injects the token into all Axios requests.
 
 ## Running Locally
 

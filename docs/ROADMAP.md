@@ -4,31 +4,26 @@ This document outlines the short-term and long-term milestones for Unified Brain
 
 ## Completed
 
-### M0 — Foundations (Shipped & Verified)
-- Platform-issued JWT Authentication.
-- Two logical Neo4j planes with separate session factories.
-- Schema stamps (`ownerId`, `constitutionVersion`).
-- Strict deny-by-default routing and identity gating.
-- Safe seeding guardrails.
+### M0 — Foundations
+- Platform-issued JWT authentication; strict deny-by-default routing and identity gating.
+- Two logical Neo4j planes with separate session factories; schema stamps (`ownerId`, `constitutionVersion`).
+- Traversal-leak fixes (directed fixed-shape queries); safe seeding guardrails.
 
-## Near Term — Remaining V1 Milestones
+### Client Brain core (V1 product)
+- Per-client knowledge domains with **client walls** (org-membership-bound access, cross-client assembly inexpressible).
+- Promotion lifecycle: propose → review → approve/purge, with `PromotionEvent` audit.
+- **Document ingestion:** PDF/DOCX/TXT/MD upload → LLM extraction (specificity-tested, confidence-floored, evidence-quoted) → review queue.
+- Client-scoped assembly + generation with ExplainabilityReceipts asserting the wall.
+- **Google Sign-In** (verified identity) alongside the dev-login scaffold.
 
-### M1 — Constitutional Assembly
-- **Template Registry with CI Lint:** Every retrieval must be a registered, reviewed, parameter-bound query. Variable-length traversals are structurally rejected.
-- **In-process Policy Decision Point (PDP):** Role-based and membership-based access evaluation before query execution.
-- **Explainability Receipts:** Context packs carrying authorization decision IDs and policy versions.
-- *Partner-visible outcome:* Explainable, auditable ContextPacks.
+## Near Term — to dogfood launch
 
-### M2 — The Bridge
-- **Reasoning Declarations:** APIs require beneficiary and witness declarations, paired with a disclosure UI ("this reasoning will be witnessed by…").
-- **Promotion Workflow:** Propose, org-scoped review, and approve-derives/reject-purges capabilities.
-- **Consumption Stubs:** Retraction gating at the constitutional boundary.
-- *Partner-visible outcome:* The promotion workflow, which is the product's core trust story.
+1. **Embeddings retrieval** — replace lexical ranking with Neo4j vector-index retrieval; the quality milestone the product's first impression depends on.
+2. **Client Room UI** — the account manager's single screen: brain browser, ask-with-context with receipt, 10-second review actions, document upload. Includes the **dev-login cutover** to Google-only auth (`ALLOW_DEV_LOGIN=false`).
+3. **Pilot hardening** — org roles (reviewer), founder dashboard v0, offboarding runbook, derogation-register review with the design partner.
+4. **MCP connector** (post-dogfood) — expose client-aware assembly to employees' existing AI tools instead of competing with them.
 
-### M3 — Pilot Hardening
-- **Offboarding Runbook:** Sever memberships, verify the personal plane survives intact.
-- **Audit Surfaces:** Provide reciprocal visibility to all actors.
-- **Derogation Register Review:** Final alignment on derogations (D1-D5) with the design partner before real usage.
+Specs for each: [CLIENT_BRAIN_V1.md](CLIENT_BRAIN_V1.md).
 
 ## Mid Term — Earning Real Users
 
