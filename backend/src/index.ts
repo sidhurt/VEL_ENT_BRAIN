@@ -27,6 +27,12 @@ import {
 } from './graphService';
 import { llmService } from './llmService';
 import { issueToken, requireAuth, requireAdmin } from './auth';
+import {
+    createClient, listClients, getClientBrain,
+    proposeKnowledge, getReviewQueue, reviewKnowledge,
+    assembleClientContext, generateForClient
+} from './clientBrain';
+import { extractClientKnowledge } from './extraction';
 
 const app = express();
 app.use(cors());
@@ -399,6 +405,100 @@ app.patch('/api/project/:projectId/status', async (req, res) => {
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// ============================================================================
+// CLIENT BRAIN — V1 product routes. The client account is the anchor entity;
+// every route walls to the caller's own org (enforced inside clientBrain.ts).
+// Errors carry .status (403 walls) — surfaced honestly, defaulting to 500.
+// ============================================================================
+
+const clientErr = (res: express.Response, err: any) =>
+    res.status(err.status || 500).json({ error: err.message });
+
+app.post('/api/clients', async (req, res) => {
+    try {
+        const { name, industry } = req.body;
+        if (!name?.trim()) return res.status(422).json({ error: 'Client name required' });
+        res.json(await createClient(req.principal!.id, name.trim(), industry));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+app.get('/api/clients', async (req, res) => {
+    try {
+        res.json(await listClients(req.principal!.id));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+app.get('/api/clients/:clientId/brain', async (req, res) => {
+    try {
+        res.json(await getClientBrain(req.principal!.id, String(req.params.clientId)));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+// Manual proposal (single items typed/edited by a human)
+app.post('/api/clients/:clientId/knowledge', async (req, res) => {
+    try {
+        const { items, source } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(422).json({ error: 'items[] required' });
+        }
+        res.json(await proposeKnowledge(req.principal!.id, String(req.params.clientId), items, source || 'manual'));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+// Ingestion: raw document text -> extracted candidates -> review queue.
+// V1 accepts extracted text; file parsing (PDF/DOCX/PPTX) is specced for handoff.
+app.post('/api/clients/:clientId/ingest', async (req, res) => {
+    try {
+        const { text, sourceName } = req.body;
+        if (!text?.trim() || text.trim().length < 100) {
+            return res.status(422).json({ error: 'text required (min 100 chars of document content)' });
+        }
+        const clientId = String(req.params.clientId);
+        // Wall check + client name happen inside; do a cheap access probe first
+        const { clientName } = await getClientBrain(req.principal!.id, clientId);
+        const extraction = await extractClientKnowledge(text, clientName, sourceName || 'uploaded document');
+        const result = await proposeKnowledge(req.principal!.id, clientId, extraction.items, sourceName || 'uploaded document');
+        res.json({
+            extracted: extraction.items.length,
+            proposed: result.proposed,
+            chunks: extraction.chunks,
+            model: extraction.model,
+            items: extraction.items,
+        });
+    } catch (err: any) { clientErr(res, err); }
+});
+
+app.get('/api/clients/:clientId/review-queue', async (req, res) => {
+    try {
+        res.json(await getReviewQueue(req.principal!.id, String(req.params.clientId)));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+app.post('/api/knowledge/:knowledgeId/review', async (req, res) => {
+    try {
+        const { action, edits } = req.body;
+        if (action !== 'approve' && action !== 'reject') {
+            return res.status(422).json({ error: "action must be 'approve' or 'reject'" });
+        }
+        res.json(await reviewKnowledge(req.principal!.id, String(req.params.knowledgeId), action, edits));
+    } catch (err: any) { clientErr(res, err); }
+});
+
+// Client-scoped assembly / generation. Every response carries the receipt
+// asserting the wall: only this client's brain was reachable.
+app.post('/api/clients/:clientId/enhance', async (req, res) => {
+    try {
+        const { prompt, executionMode = 'execute' } = req.body;
+        if (!prompt?.trim()) return res.status(422).json({ error: 'prompt required' });
+        const clientId = String(req.params.clientId);
+        if (executionMode === 'assemble') {
+            res.json(await assembleClientContext(req.principal!.id, clientId, prompt));
+        } else {
+            res.json(await generateForClient(req.principal!.id, clientId, prompt));
+        }
+    } catch (err: any) { clientErr(res, err); }
 });
 
 // Core Enhance / Context Assembly Endpoint
