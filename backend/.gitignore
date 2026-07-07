@@ -7,3 +7,4 @@ node_modules/
 # Ad-hoc test/debug scripts — never commit these
 test_clear.ts
 check_domain.ts
+diag_neo4j.ts
