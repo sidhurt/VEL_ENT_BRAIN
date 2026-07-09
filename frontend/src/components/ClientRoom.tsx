@@ -109,7 +109,7 @@ export default function ClientRoom() {
             <div className="min-h-screen bg-slate-950 flex items-center justify-center font-sans text-slate-300 px-4">
                 <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl max-w-md w-full">
                     <h1 className="text-2xl font-bold text-slate-100 text-center mb-1">Client Room</h1>
-                    <p className="text-sm text-slate-400 text-center mb-8">Sign in to open your client brains.</p>
+                    <p className="text-sm text-slate-400 text-center mb-8">Sign in to your workspace.</p>
                     <GoogleSignIn onSignIn={(p) => setPrincipalId(p.id)} />
                     <div className="flex items-center gap-3 my-6">
                         <div className="flex-1 h-px bg-slate-800" />
