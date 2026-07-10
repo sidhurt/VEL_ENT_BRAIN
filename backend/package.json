@@ -7,7 +7,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/seed.ts",
-    "test": "tsc --noEmit"
+    "backfill:client-embeddings": "tsx src/backfillClientEmbeddings.ts",
+    "test": "tsc --noEmit && npm run test:behavior",
+    "test:behavior": "tsx src/clientBrain.behavior.test.ts"
   },
   "keywords": [],
   "author": "Siddharth Shrivastava",

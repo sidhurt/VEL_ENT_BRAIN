@@ -1,6 +1,8 @@
 import { getSession } from './db';
 import { CONSTITUTION_VERSION } from './planes';
 import { OpenAIProvider } from './llm/OpenAIProvider';
+import OpenAI from 'openai';
+import { isEmbedding, rankFactAndLearningItems } from './clientBrainRetrieval';
 
 // ============================================================================
 // CLIENT BRAIN — the V1 product core.
@@ -22,6 +24,43 @@ export interface KnowledgeItem {
 }
 
 const KINDS: KnowledgeKind[] = ['voice', 'rule', 'fact', 'learning'];
+const SEMANTIC_KINDS: KnowledgeKind[] = ['fact', 'learning'];
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
+
+let embeddingClient: OpenAI | null | undefined;
+
+const getEmbeddingClient = () => {
+    if (embeddingClient === undefined) {
+        embeddingClient = process.env.OPENAI_API_KEY
+            ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 8_000, maxRetries: 0 })
+            : null;
+    }
+    if (!embeddingClient) throw new Error('OPENAI_API_KEY not configured for embeddings');
+    return embeddingClient;
+};
+
+const knowledgeEmbeddingInput = (title: string, content: string) => `${title}\n\n${content}`;
+
+// Exported for the operational backfill script. The API accepts a batch of
+// inputs, which makes backfilling existing client knowledge cheap and fast.
+export const createEmbeddings = async (inputs: string[]): Promise<number[][]> => {
+    if (inputs.length === 0) return [];
+    const response = await getEmbeddingClient().embeddings.create({
+        model: EMBEDDING_MODEL,
+        input: inputs,
+    });
+    const embeddings = response.data
+        .slice()
+        .sort((left, right) => left.index - right.index)
+        .map(result => result.embedding);
+    if (embeddings.length !== inputs.length || embeddings.some(embedding => !isEmbedding(embedding))) {
+        throw new Error('Embedding provider returned an invalid response');
+    }
+    return embeddings;
+};
+
+export const createKnowledgeEmbedding = async (title: string, content: string) =>
+    (await createEmbeddings([knowledgeEmbeddingInput(title, content)]))[0];
 
 const genId = (prefix: string) =>
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -222,15 +261,41 @@ export const reviewKnowledge = async (
             throw err;
         }
         const clientId = res.records[0].get('clientId');
+        let embeddingStatus: 'stored' | 'unavailable' | 'not-needed' = 'not-needed';
 
         if (action === 'approve') {
-            await session.run(`
+            const activation = await session.run(`
                 MATCH (k:ClientKnowledge {id: $knowledgeId})
                 SET k.status = 'active',
                     k.reviewedBy = $principalId, k.reviewedAt = timestamp(),
                     k.title = coalesce($title, k.title),
                     k.content = coalesce($content, k.content)
+                RETURN k.kind as kind, k.title as title, k.content as content
             `, { knowledgeId, principalId, title: edits?.title ?? null, content: edits?.content ?? null });
+
+            const activated = activation.records[0];
+            const kind = activated?.get('kind') as KnowledgeKind | undefined;
+            if (kind && SEMANTIC_KINDS.includes(kind)) {
+                try {
+                    const embedding = await createKnowledgeEmbedding(
+                        activated.get('title') as string,
+                        activated.get('content') as string
+                    );
+                    await session.run(`
+                        MATCH (k:ClientKnowledge {id: $knowledgeId, status: 'active'})
+                        SET k.embedding = $embedding,
+                            k.embeddingModel = $embeddingModel,
+                            k.embeddedAt = timestamp()
+                    `, { knowledgeId, embedding, embeddingModel: EMBEDDING_MODEL });
+                    embeddingStatus = 'stored';
+                } catch (err: any) {
+                    // Promotion must remain available if the embedding provider is
+                    // temporarily unavailable. Assembly will safely use lexical
+                    // retrieval until this item is backfilled.
+                    embeddingStatus = 'unavailable';
+                    console.warn(`Embedding unavailable for ClientKnowledge ${knowledgeId}: ${err.message}`);
+                }
+            }
         } else {
             await session.run(
                 `MATCH (k:ClientKnowledge {id: $knowledgeId}) DETACH DELETE k`,
@@ -248,7 +313,7 @@ export const reviewKnowledge = async (
             CREATE (c)-[:HAS_EVENT]->(e)
         `, { clientId, eventId: genId('evt'), knowledgeId, action, principalId, cv: CONSTITUTION_VERSION });
 
-        return { knowledgeId, action, clientId };
+        return { knowledgeId, action, clientId, embeddingStatus };
     } finally {
         await session.close();
     }
@@ -259,19 +324,6 @@ export const reviewKnowledge = async (
 // makes AI output generic). Facts and learnings are ranked against the prompt.
 // The receipt states exactly what entered and asserts the wall.
 
-const rankItems = (items: any[], prompt: string, cap: number) => {
-    const promptLower = prompt.toLowerCase();
-    return items
-        .map(item => {
-            const words: string[] = (item.title + ' ' + item.content).toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
-            const matches = words.filter(w => promptLower.includes(w)).length;
-            const score = matches * 10 + Number(item.usageCount || 0);
-            return { item, score, reason: matches > 0 ? 'matched request' : 'frequently used' };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, cap);
-};
-
 export const assembleClientContext = async (principalId: string, clientId: string, prompt: string) => {
     const session = getSession();
     try {
@@ -279,19 +331,34 @@ export const assembleClientContext = async (principalId: string, clientId: strin
         const res = await session.run(`
             MATCH (c:Client {id: $clientId})-[:HAS_KNOWLEDGE]->(k:ClientKnowledge {status: 'active'})
             RETURN k.id as id, k.kind as kind, k.title as title, k.content as content,
-                   coalesce(k.usageCount, 0) as usageCount
+                   coalesce(k.usageCount, 0) as usageCount,
+                   k.embedding as embedding, k.embeddingModel as embeddingModel
         `, { clientId });
 
         const all = res.records.map(r => ({
             id: r.get('id'), kind: r.get('kind') as KnowledgeKind,
             title: r.get('title'), content: r.get('content'),
             usageCount: Number(r.get('usageCount')),
+            embedding: r.get('embedding'),
+            embeddingModel: r.get('embeddingModel'),
         }));
 
         const voice = all.filter(k => k.kind === 'voice');
         const rules = all.filter(k => k.kind === 'rule');
-        const rankedFacts = rankItems(all.filter(k => k.kind === 'fact'), prompt, 6);
-        const rankedLearnings = rankItems(all.filter(k => k.kind === 'learning'), prompt, 4);
+        const facts = all.filter(k => k.kind === 'fact');
+        const learnings = all.filter(k => k.kind === 'learning');
+        const ranked = await rankFactAndLearningItems(
+            facts,
+            learnings,
+            prompt,
+            EMBEDDING_MODEL,
+            async request => (await createEmbeddings([request]))[0],
+        );
+        if (ranked.retrieval === 'keyword-fallback') {
+            console.warn(`Semantic retrieval unavailable for client ${clientId}: ${ranked.fallbackReason}`);
+        }
+        const rankedFacts = ranked.facts;
+        const rankedLearnings = ranked.learnings;
 
         const used = [
             ...voice.map(k => ({ ...k, reason: 'brand voice — always included' })),
@@ -319,6 +386,7 @@ export const assembleClientContext = async (principalId: string, clientId: strin
         const receipt = {
             clientId, clientName,
             itemsUsed: used.map(k => ({ id: k.id, kind: k.kind, title: k.title, reason: k.reason })),
+            retrieval: ranked.retrieval,
             walls: `Assembled exclusively from ${clientName}'s Client Brain. No other client's knowledge was accessible to this request.`,
             assembledAt: Date.now(),
             constitutionVersion: CONSTITUTION_VERSION,

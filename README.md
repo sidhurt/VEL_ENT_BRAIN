@@ -77,6 +77,13 @@ databases unless `SEED_ALLOW_WIPE=true`):
 cd backend && npm run seed
 ```
 
+After deploying semantic retrieval for an existing database, backfill active client
+facts and learnings (safe to rerun; requires `OPENAI_API_KEY`):
+
+```bash
+cd backend && npm run backfill:client-embeddings
+```
+
 Integration test for the memory engine (backend must be running):
 
 ```bash
@@ -128,8 +135,9 @@ Honesty policy: gaps are documented, not hidden.
   Client Brain lifecycle end-to-end (document upload → extraction → review →
   client-walled assembly → generation with receipt); the original personal memory
   engine with reinforcement/decay.
-- **Known limitations:** ranking is lexical (embeddings retrieval is the next
-  milestone); a dev login scaffold remains enabled in production behind an env flag
+- **Known limitations:** client fact/learning ranking uses semantic embeddings after the
+  one-time backfill and otherwise falls back to lexical retrieval; a dev login scaffold
+  remains enabled in production behind an env flag
   until the console moves to Google-only auth; both planes share one Neo4j instance
   (logical separation); org-level roles and the formal template-registry/PDP layer
   are designed but not built. The full register with exit paths:

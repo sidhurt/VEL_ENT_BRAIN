@@ -71,11 +71,25 @@ PPTX support (`officeparser`), OCR for scanned PDFs — both post-dogfood.
   new Google users have no org membership until attached (`/api/enterprise/attach-user`) —
   the Client Room onboarding flow should absorb this.
 
-### B3 — Embeddings retrieval (≈1 week)
-Replace keyword `rankItems` with vectors. Neo4j 5 has native vector indexes.
-- On knowledge activation: embed `title + content` (OpenAI `text-embedding-3-small`), store on the node; create a vector index per label.
-- In `assembleClientContext`: embed the prompt, `db.index.vector.queryNodes` scoped to the client, blend with `usageCount`. Keep voice+rule always-in.
-- Acceptance: a prompt about "festive packaging" retrieves the FSSAI festive rule without lexical overlap.
+### B3 — Embeddings retrieval ✅ IMPLEMENTED (backfill required on deployment)
+Semantic retrieval is intentionally client-wall-safe: it never uses a global Neo4j vector
+index. Instead, the existing client-scoped query fetches only the active knowledge for the
+authorized client, then cosine similarity is computed in application memory over that
+already-walled set.
+
+- On approval, `fact` and `learning` items embed `title + content` using
+  `text-embedding-3-small` (or `EMBEDDING_MODEL`) and persist the vector on the
+  `ClientKnowledge` node. Voice and rules remain always included and do not need ranking.
+- `assembleClientContext` embeds the request, blends cosine similarity with a small capped
+  prior-use boost, and records `receipt.retrieval = 'semantic'`. If the provider is unavailable
+  or any active candidate still lacks an embedding, it safely uses the complete keyword ranker
+  and records `'keyword-fallback'`; generation and client walls remain available.
+- Existing knowledge: run `cd backend && npm run backfill:client-embeddings` after deployment
+  (optional `EMBEDDING_BACKFILL_BATCH_SIZE`, default 50). It updates only active facts and
+  learnings missing an embedding for the configured model, so it is safe to resume or rerun
+  after changing models.
+- Acceptance: a prompt about festive packaging retrieves a semantically relevant fact or
+  learning even where it has no lexical overlap. Client rules remain present regardless.
 
 ### B4 — Client Room UI (≈1.5–2 weeks) — the only screen account managers open
 Strip-mine Jarvis/EnterpriseBrain for components. Three views:
