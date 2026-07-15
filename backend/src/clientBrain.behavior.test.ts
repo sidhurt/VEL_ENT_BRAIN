@@ -1,3 +1,4 @@
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { isInt } from 'neo4j-driver';
 import { BACKFILL_BATCH_QUERY, loadNextBackfillBatch } from './backfillClientEmbeddingsCore';
@@ -5,7 +6,7 @@ import { rankFactAndLearningItems, type RetrievalItem } from './clientBrainRetri
 
 const embeddingModel = 'text-embedding-3-small';
 
-const semanticRankingUsesMeaningRatherThanKeywordOverlap = async () => {
+test('semantic ranking uses meaning rather than keyword overlap', async () => {
     const facts: RetrievalItem[] = [
         {
             id: 'fact-holiday-presentation',
@@ -36,9 +37,9 @@ const semanticRankingUsesMeaningRatherThanKeywordOverlap = async () => {
     assert.equal(result.retrieval, 'semantic');
     assert.equal(result.facts[0].item.id, 'fact-holiday-presentation');
     assert.equal(result.facts[0].reason, 'semantic match');
-};
+});
 
-const missingEmbeddingsUseTheCompleteKeywordFallback = async () => {
+test('missing embeddings use the complete keyword fallback', async () => {
     const facts: RetrievalItem[] = [
         {
             id: 'fact-festive',
@@ -68,9 +69,9 @@ const missingEmbeddingsUseTheCompleteKeywordFallback = async () => {
     assert.equal(result.facts.length, 2);
     assert.equal(result.facts[0].item.id, 'fact-festive');
     assert.equal(result.facts[0].reason, 'matched request');
-};
+});
 
-const backfillUsesAnIntegerLimitParameter = async () => {
+test('backfill uses an integer LIMIT parameter', async () => {
     let query = '';
     let parameters: any;
     const session = {
@@ -88,16 +89,4 @@ const backfillUsesAnIntegerLimitParameter = async () => {
     assert.equal(isInt(parameters.batchSize), true);
     assert.equal(parameters.batchSize.toNumber(), 50);
     assert.equal(parameters.embeddingModel, embeddingModel);
-};
-
-const run = async () => {
-    await semanticRankingUsesMeaningRatherThanKeywordOverlap();
-    await missingEmbeddingsUseTheCompleteKeywordFallback();
-    await backfillUsesAnIntegerLimitParameter();
-    console.log('Client Brain semantic-retrieval behavior tests passed.');
-};
-
-run().catch(error => {
-    console.error(error);
-    process.exitCode = 1;
 });

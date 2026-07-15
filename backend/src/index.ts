@@ -35,13 +35,28 @@ import {
 import { extractClientKnowledge } from './extraction';
 import { parseDocument } from './fileParsing';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 
 // In-memory uploads (serverless-safe), capped at 15MB
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 const app = express();
+// Vercel terminates TLS and forwards the client IP in X-Forwarded-For;
+// trust exactly one proxy hop so rate limiting keys on the real client.
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
+
+// Credential endpoints are the brute-force surface; throttle per IP.
+// In-memory store: per-instance on serverless, still bounds a single hot path.
+const authLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication attempts. Try again later.' },
+});
+app.use('/api/auth', authLimiter);
 
 const PORT = process.env.PORT || 3000;
 
@@ -780,7 +795,7 @@ app.post('/api/onboard/demo-personas', requireAdmin, async (req, res) => {
     }
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
         console.log(`Unified Brain Backend running on http://localhost:${PORT}`);
     });

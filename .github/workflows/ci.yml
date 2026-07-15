@@ -14,11 +14,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Backend — install & typecheck
+      - name: Backend — install, typecheck & test
         working-directory: backend
         run: |
           npm ci
-          npx tsc --noEmit
+          npm test
 
       - name: Frontend — install, typecheck & build
         working-directory: frontend
