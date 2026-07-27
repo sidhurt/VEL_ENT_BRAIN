@@ -33,6 +33,21 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Deep health: runs a trivial read against Neo4j. Hit daily by the Vercel cron
+// so the Aura Free instance never idles into a pause (paused ~30 days = deleted).
+app.get('/api/health/db', async (req, res) => {
+    const { getSession } = await import('./db');
+    const session = getSession();
+    try {
+        await session.run('RETURN 1');
+        res.json({ status: 'ok', db: 'reachable', timestamp: new Date().toISOString() });
+    } catch (e) {
+        res.status(503).json({ status: 'degraded', db: 'unreachable' });
+    } finally {
+        await session.close();
+    }
+});
+
 // Unauthenticated surface: token issuance only (health above, auth routes here).
 app.use(authRoutes);
 
