@@ -59,6 +59,34 @@ export const verifyGoogleCredential = async (credential: string): Promise<Google
     };
 };
 
+// Org auto-attach on first Google sign-in.
+// Without this a verified Google user authenticates but belongs to no org, so
+// every client-scoped query returns nothing — a new teammate's first login shows
+// an empty product. ORG_EMAIL_MAP maps an email domain OR an exact address to an
+// org id: "toteminteractive.in:org-totem-interactive,someone@gmail.com:org-x".
+// Membership is still org-plane data (Derogation D4): this grants it, never identity.
+const orgEmailMap: Array<[string, string]> = (process.env.ORG_EMAIL_MAP ?? '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .map(entry => {
+        const idx = entry.lastIndexOf(':');
+        return idx === -1
+            ? null
+            : [entry.slice(0, idx).trim().toLowerCase(), entry.slice(idx + 1).trim()] as [string, string];
+    })
+    .filter((x): x is [string, string] => x !== null && Boolean(x[0]) && Boolean(x[1]));
+
+export const resolveOrgForEmail = (email?: string): string | null => {
+    if (!email) return null;
+    const addr = email.trim().toLowerCase();
+    const domain = addr.split('@')[1] ?? '';
+    // Exact-address rules win over domain rules.
+    for (const [pattern, orgId] of orgEmailMap) if (pattern === addr) return orgId;
+    for (const [pattern, orgId] of orgEmailMap) if (pattern === domain) return orgId;
+    return null;
+};
+
 // Dev login (password-less, identity-asserted) is a pre-OAuth scaffold.
 // Non-production: allowed. Production: only with explicit ALLOW_DEV_LOGIN=true
 // (currently required by the admin console; flipped off when the Client Room

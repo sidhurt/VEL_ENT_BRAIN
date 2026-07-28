@@ -1,5 +1,5 @@
 import express from 'express';
-import { issueToken, verifyGoogleCredential, devLoginAllowed } from '../auth';
+import { issueToken, verifyGoogleCredential, devLoginAllowed, resolveOrgForEmail } from '../auth';
 import { getSession } from '../db';
 
 // Unauthenticated token issuance. Mounted BEFORE the /api requireAuth gate;
@@ -20,6 +20,20 @@ router.post('/api/auth/google', async (req, res) => {
                  SET u.name = $name, u.email = $email, u.authProvider = 'google', u.lastLogin = timestamp()`,
                 { id: g.id, name: g.name, email: g.email ?? null }
             );
+            // Grant org membership on first sign-in when the address is mapped,
+            // so the product is populated the moment a teammate logs in.
+            const orgId = resolveOrgForEmail(g.email);
+            if (orgId) {
+                await session.run(
+                    `MATCH (u:User {id: $id})
+                     MATCH (t:Team {id: 'team-default-' + $orgId})-[:BELONGS_TO]->(:Organization)
+                     MERGE (u)-[m:MEMBER_OF]->(t)
+                     ON CREATE SET m.memoryState = 'Active', m.usageCount = 0,
+                                   m.provenance = 'email-domain-auto-attach'
+                     SET m.lastUsed = timestamp()`,
+                    { id: g.id, orgId }
+                );
+            }
         } finally {
             await session.close();
         }
